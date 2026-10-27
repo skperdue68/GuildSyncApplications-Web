@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+SavedVariables/
+*.lua
+coverage/
+playwright-report/
+test-results/
+
+browser-temp/
+data/shared-library/

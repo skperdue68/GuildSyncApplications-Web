@@ -1,0 +1,10 @@
+{
+  "name": "guildsyncapplications-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GuildSyncApplications welcome message and email studio",
+  "scripts": { "start": "node src/server.js", "test": "node --test", "test:browser": "node scripts/browser-check.mjs" },
+  "engines": { "node": ">=22" },
+  "devDependencies": { "playwright": "^1.56.1" }
+}

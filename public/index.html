@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark"><meta name="description" content="Create a warmer welcome. A browser editor for GuildSyncApplications messages and emails.">
+  <title>GuildSyncApplications · Welcome Studio</title>
+  <link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="/" aria-label="GuildSyncApplications Welcome Studio home"><img src="/logo.svg" alt=""><span><strong>GuildSync<span>Applications</span></strong><small>WELCOME STUDIO</small></span></a>
+    <div class="header-actions"><span class="browser-badge"><i></i> Browser editor</span><button id="help">How it works</button><button id="library">Server library</button></div>
+  </header>
+  <section class="hero">
+    <div><p class="eyebrow">A PLACE IN THE FAMILY</p><h1>Every great guild starts<br>with a warm welcome.</h1><p>Craft the first hello. Make it feel like home.</p></div>
+    <div class="hero-seal" aria-hidden="true"><span>G</span><small>YOUR GUILD. IN SYNC.</small></div>
+  </section>
+  <div id="status" role="status" aria-live="polite">Open your SavedVariables to get started. Your file stays in the browser until you choose Save to server.</div>
+  <main>
+    <section id="landing">
+      <div class="intro"><span class="eyebrow">THE WELCOME, WITHOUT THE WORKAROUND</span><h2>Your words. A little more room.</h2><p>Create and refine your guild’s welcome chat and in-game mail, all outside the add-on editor.</p><div class="landing-actions"><label class="button gold" tabindex="0">Open SavedVariables<input id="open" type="file" accept=".lua,.txt" hidden></label><button id="new">Start a new file</button></div><button class="text-button" id="sample">Try sample workspace <span aria-hidden="true">↗</span></button></div>
+      <div class="steps"><article><b>01</b><div><h3>Bring your file</h3><p>Open GuildSyncApplications.lua from your ESO SavedVariables folder.</p></div></article><article><b>02</b><div><h3>Find your voice</h3><p>Edit welcome messages and emails. Preview each greeting with a member’s name.</p></div></article><article><b>03</b><div><h3>Welcome them in</h3><p>Save a shared copy or download your updated Lua file for ESO.</p></div></article></div>
+    </section>
+    <section id="workspace" hidden>
+      <div class="workspace-toolbar"><div class="profile-group"><label>ESO account<select id="account"></select></label><span id="file-state" class="quiet">No changes</span></div><div class="toolbar-actions"><button id="open-another">Open file</button><button id="save-server">Save to server</button><button id="download" class="gold">Download Lua <span aria-hidden="true">↓</span></button></div></div>
+      <div class="workspace-grid">
+        <aside class="panel library-panel"><div class="panel-heading"><div><p class="eyebrow">YOUR COLLECTION</p><h2>Welcome library</h2></div><span id="total-count" class="count">0</span></div>
+          <div class="tabs" role="tablist" aria-label="Template category"><button id="tab-message" role="tab" aria-selected="true">Welcome chat <span id="chat-count">0</span></button><button id="tab-email" role="tab" aria-selected="false">Welcome emails <span id="email-count">0</span></button></div>
+          <label class="search-label"><span class="sr-only">Find a template</span><input id="search" type="search" placeholder="Find a template…"></label>
+          <div id="template-list" class="template-list"></div>
+          <div class="list-actions"><button id="add" class="gold">+ New message</button><button id="starters">Browse starters</button></div>
+          <p class="list-help">Enabled templates join the add-on’s selection pool. Disabled templates stay saved.</p>
+        </aside>
+        <section class="panel editor-panel"><div id="editor-empty" class="empty-editor"><span aria-hidden="true">✦</span><h2>A welcome worth writing.</h2><p>Choose a template or create your first greeting.</p></div>
+          <form id="editor" hidden><div class="panel-heading"><div><p id="editor-kind" class="eyebrow">WELCOME CHAT</p><h2 id="editor-heading">Edit your welcome</h2></div><span id="draft-state" class="quiet">Applied</span></div>
+            <div class="editor-fields"><label>Template name<input id="title" autocomplete="off" placeholder="A name you’ll recognize"></label><label class="check"><input id="enabled" type="checkbox" checked><span>Enabled in the welcome pool</span></label>
+              <label id="subject-label" hidden>Email subject<input id="subject" placeholder="Welcome to the Family, {name}"></label>
+              <div class="field-heading"><label id="content-label" for="content">Message text</label><button id="insert-name" type="button" class="token">+ {name}</button></div>
+              <textarea id="content" rows="8" placeholder="Make your newest member feel at home…"></textarea>
+              <div class="field-meta"><span>Use <code>{name}</code> for the applicant’s ESO account name.</span><output id="length"></output></div>
+              <div class="editor-footer"><button id="apply" type="submit" class="gold">Apply changes</button><button id="discard" type="button">Discard draft</button><span class="spacer"></span><button id="duplicate" type="button">Duplicate</button><button id="delete" type="button" class="danger">Delete</button></div>
+            </div>
+          </form>
+        </section>
+        <aside class="preview-column"><section class="panel preview-panel"><div class="panel-heading"><div><p class="eyebrow">THE FIRST IMPRESSION</p><h2>Live preview</h2></div><span class="live-dot" aria-hidden="true"></span></div><div class="preview-fields"><label>Preview account name<input id="preview-name" value="@NewMember" autocomplete="off"></label><div class="game-preview"><div id="preview-channel">GUILD CHAT · ALPHABET MAFIA</div><h3 id="preview-subject" hidden></h3><div id="preview-content">Your welcome will appear here.</div></div><p id="preview-warning" class="hint">Preview only. Messages are sent by the add-on inside ESO.</p></div></section>
+          <section class="note-card"><span aria-hidden="true">↙</span><h3>Bring your welcome into ESO</h3><p>Apply your changes, download the Lua file, then close ESO before replacing your SavedVariables. Keep a backup of the original.</p><button class="text-button" id="install-help">Show file instructions →</button></section>
+        </aside>
+      </div>
+    </section>
+  </main>
+  <footer><span>GuildSyncApplications <b>WELCOME STUDIO</b></span><span>Made for the people who make a guild feel like home.</span></footer>
+  <dialog id="dialog" aria-labelledby="dialog-title"><div class="dialog-heading"><h2 id="dialog-title"></h2><button id="close-dialog" aria-label="Close dialog">×</button></div><div id="dialog-body"></div></dialog>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
