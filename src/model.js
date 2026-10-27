@@ -1,4 +1,4 @@
-import {writeSavedVariables, setLuaValue, isLuaNumericKey} from './lua-data.js';
+import {parseSavedVariables, writeSavedVariables, setLuaValue, isLuaNumericKey} from './lua-data.js';
 const table = value => value && typeof value === 'object' && !Array.isArray(value);
 const fields = kind => kind === 'message' ? ['title','message','enabled'] : ['title','subject','body','enabled'];
 function names(kind) {
@@ -82,4 +82,28 @@ export function exportDocument(doc) {
     try { validateEntry(kind,entry); } catch(error) { throw Error(`${p.account}: ${entry.title || kind}: ${error.message}`); }
   }
   return writeSavedVariables(doc);
+}
+
+export function importTemplates(target, source, selection) {
+  // Stage the recipient settings through the Lua codec to retain numeric key types.
+  // Commit only after every selection succeeds; no records or account branches travel.
+  const staged=profiles(parseSavedVariables(writeSavedVariables({Default:{'@Recipient':{$AccountWide:{settings:settings(target)}}}})))[0];
+  let added=0,skipped=0;
+  for(const kind of ['message','email']) {
+    const sourceEntries=entries(source,kind);
+    const signature=entry=>JSON.stringify(kind==='message'?[entry.message]:[entry.subject,entry.body]);
+    const seen=new Set(entries(staged,kind).map(({entry})=>signature(entry)));
+    for(const key of new Set(selection[kind]||[])) {
+      const entry=sourceEntries.find(item=>item.key===String(key))?.entry;
+      if(!entry)throw Error('A selected source template no longer exists.');
+      const values={};
+      for(const field of fields(kind))if(Object.hasOwn(entry,field))values[field]=entry[field];
+      validateEntry(kind,values);
+      const content=signature(entry);
+      if(seen.has(content)){skipped++;continue;}
+      addEntry(staged,kind,values);seen.add(content);added++;
+    }
+  }
+  if(added)setLuaValue(target.data,'settings',staged.data.settings);
+  return {added,skipped};
 }

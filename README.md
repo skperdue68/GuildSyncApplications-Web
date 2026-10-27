@@ -26,6 +26,16 @@ Imported unknown fields, other accounts, application records, IDs and usage hist
 
 ## Shared server library
 
+### Copy someone else's templates into your own file
+
+1. Open **your own** latest `GuildSyncApplications.lua` and select your account.
+2. Choose **Import templates from server**, then **Choose templates** beside the saved file you want to borrow from. You can also choose **Import templates** beside a file in the server library.
+3. Select the source account and check the welcome messages and emails you want. The dialog names your destination account.
+4. Choose **Import selected templates**. Only template wording, titles and enabled state are copied. Your existing templates, application records, other accounts and settings remain in place. Copies receive fresh local IDs and zero usage history; identical chat text or email subject/body pairs are skipped.
+5. Edit the imported wording if desired, then **Download Lua** to get your combined file, or save it under a new server name.
+
+For a blank configuration this fills its welcome library without bringing over the writer's account data. **Load from server** continues to open an entire saved file; use **Import templates from server** to merge wording into your own account.
+
 Like SCM-Web, this library has **no logins**. Everyone using the site can load saved files. **Save to server uploads the complete Lua file**, including account names, application records and usage history. The save dialog requires explicit acknowledgement. Opening and editing local files stays in your browser until that action.
 
 - Save under a friendly unique name. Names are case-insensitive; existing saves cannot be overwritten or deleted through the app.

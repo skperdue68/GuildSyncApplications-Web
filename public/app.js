@@ -1,5 +1,5 @@
 import {parseSavedVariables} from '/lua-data.js';
-import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,byteLength,preview} from '/model.js';
+import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,byteLength,preview,importTemplates} from '/model.js';
 import {starterTemplates} from '/defaults.js';
 
 const $=id=>document.getElementById(id);
@@ -146,25 +146,77 @@ bind('save-server','click',()=>{
   finally{button.disabled=false;}
  }));
 });
-bind('library','click',async()=>{
- showDialog('Shared server library','<p>Loading saved files…</p>');
+async function openLibrary(mode='load'){
+ if(mode==='import')applyDraft();
+ showDialog(mode==='import'?'Import templates from server':'Shared server library','<p>Loading saved files…</p>');
  const loadingNode=$('dialog-body').firstElementChild;
  const data=await (await request('/api/library')).json();
  if(!$('dialog').open||$('dialog-body').firstElementChild!==loadingNode)return;
- $('dialog-body').replaceChildren(el('p','Complete configurations shared by this site’s users. Loading a copy opens it in your browser; the saved version stays unchanged.'));
+ $('dialog-body').replaceChildren(el('p',mode==='import'?'Choose a saved file to copy welcome messages and emails into your current account. Your own records and existing templates stay in place.':'Complete configurations shared by this site’s users. Load opens the complete saved file. Import templates copies selected wording into your currently open account.'));
  if(!data.files.length)$('dialog-body').append(el('p','No shared files yet. Open or create a file, then choose Save to server.'));
  for(const file of data.files){
   const row=el('div',undefined,'library-row'),copy=el('div');copy.append(el('strong',file.name),el('small',new Date(file.createdAt).toLocaleString()+' · '+Math.ceil(file.bytes/1024)+' KB'));
-  const button=el('button','Load');button.setAttribute('aria-label','Load '+file.name);button.addEventListener('click',run(async()=>{
+  const button=el('button',mode==='import'?'Choose templates':'Load');button.setAttribute('aria-label',(mode==='import'?'Choose templates from ':'Load ')+file.name);button.addEventListener('click',run(async()=>{
    button.disabled=true;
    try{
     const text=await(await request('/api/library/'+file.id)).text();
     if(!$('dialog').open||!button.isConnected)return;
+    if(mode==='import'){showTemplateImport(parseSavedVariables(text),file.name);return;}
     if(!canReplace())return;
     loadDocument(parseSavedVariables(text),'Loaded '+file.name);$('dialog').close();
    }finally{button.disabled=false;}
-  }));row.append(copy,button);$('dialog-body').append(row);
+  }));
+  const actions=el('div',undefined,'row-actions');actions.append(button);
+  if(mode==='load'&&state.doc){
+   const importButton=el('button','Import templates');importButton.setAttribute('aria-label','Import templates from '+file.name);
+   importButton.addEventListener('click',run(async()=>{
+    applyDraft();importButton.disabled=true;
+    try{const text=await(await request('/api/library/'+file.id)).text();if($('dialog').open&&importButton.isConnected)showTemplateImport(parseSavedVariables(text),file.name);}
+    finally{importButton.disabled=false;}
+   }));actions.append(importButton);
+  }
+  row.append(copy,actions);$('dialog-body').append(row);
  }
  $('dialog-body').append(el('p','Shared copies include complete account data. Download and install while ESO is closed.'));
-});
+}
+bind('library','click',()=>openLibrary());
+bind('import-server','click',()=>openLibrary('import'));
+
+function showTemplateImport(source,fileName){
+ if(!state.doc)throw Error('Open your own SavedVariables file first.');
+ applyDraft();
+ const destination=current(),destinationDoc=state.doc,sourceAccounts=profiles(source);
+ if(!sourceAccounts.length)throw Error('This saved file has no account-wide templates.');
+ showDialog('Choose welcome templates',`<p id="import-destination"></p><p>Copies get fresh IDs and usage history. Identical message text or email subject/body pairs are skipped. Existing templates are never replaced.</p><form id="import-form"><label>Source account<select id="import-account"></select></label><div id="import-choices"></div><p id="import-summary" class="hint"></p>${dialogError}<button id="confirm-import" class="gold">Import selected templates</button></form>`);
+ $('import-destination').textContent=`From ${fileName} into ${destination.label}. Only welcome templates are copied; application records and account settings stay yours.`;
+ $('import-account').replaceChildren(...sourceAccounts.map((p,i)=>{const option=el('option',p.label);option.value=i;return option;}));
+ function choices(){
+  $('import-choices').replaceChildren();$('dialog-error').textContent='';
+  const sourceProfile=sourceAccounts[Number($('import-account').value)];
+  for(const kind of ['message','email']){
+   const section=el('section',undefined,'import-category');section.append(el('h3',kind==='message'?'Welcome chat':'Welcome emails'));
+   const items=entries(sourceProfile,kind);
+   if(!items.length)section.append(el('p','No templates in this category.','hint'));
+   for(const {key,entry} of items){
+    const label=el('label',undefined,'check import-choice'),checkbox=el('input');checkbox.type='checkbox';checkbox.checked=true;checkbox.dataset.kind=kind;checkbox.value=key;
+    const copy=el('span');copy.append(el('strong',entry.title||`Welcome ${kind} ${entry.id||key}`),el('small',(entry.enabled===false?'Disabled · ':'')+(entry.message||entry.subject+'\n'+entry.body)));
+    label.append(checkbox,copy);section.append(label);
+   }
+   $('import-choices').append(section);
+  }
+  selectionSummary();
+ }
+ function selectionSummary(){const count=$('import-choices').querySelectorAll('input:checked').length;$('import-summary').textContent=`${count} templates selected`;$('confirm-import').disabled=count===0;}
+ $('import-account').addEventListener('change',run(choices));$('import-choices').addEventListener('change',selectionSummary);
+ $('import-form').addEventListener('submit',run(event=>{
+  event.preventDefault();
+  if(state.doc!==destinationDoc||current()!==destination)throw Error('The destination account changed. Close this dialog and start the import again.');
+  const selected={message:[],email:[]};for(const checkbox of $('import-choices').querySelectorAll('input:checked'))selected[checkbox.dataset.kind].push(checkbox.value);
+  const result=importTemplates(destination,sourceAccounts[Number($('import-account').value)],selected);
+  if(result.added)state.changed=true;
+  state.selected=undefined;$('search').value='';render();$('dialog').close();
+  status(`Imported ${result.added} templates into ${destination.account}; skipped ${result.skipped} identical copies. Save to server or download Lua to keep this version.`);
+ }));
+ choices();
+}
 window.addEventListener('beforeunload',event=>{if(state.changed||state.draftDirty){event.preventDefault();event.returnValue='';}});
