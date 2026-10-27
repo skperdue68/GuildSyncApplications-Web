@@ -86,6 +86,7 @@ bind('open','change',async event=>{
 });
 document.querySelector('label.button').addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();$('open').click();}});
 bind('open-another','click',()=>$('open').click());
+bind('load-server','click',()=>$('library').click());
 bind('new','click',()=>{
  if(!canReplace())return;
  showDialog('Start a new welcome file',`<p>For a fresh setup, enter the ESO account that will use these templates. To keep existing application records and settings, open your current SavedVariables instead.</p><form id="new-form"><label>ESO account name<input id="new-account" placeholder="@YourAccount" required autocomplete="off"></label>${dialogError}<button class="gold">Create file</button></form>`);

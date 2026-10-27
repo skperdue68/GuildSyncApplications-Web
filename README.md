@@ -29,7 +29,7 @@ Imported unknown fields, other accounts, application records, IDs and usage hist
 Like SCM-Web, this library has **no logins**. Everyone using the site can load saved files. **Save to server uploads the complete Lua file**, including account names, application records and usage history. The save dialog requires explicit acknowledgement. Opening and editing local files stays in your browser until that action.
 
 - Save under a friendly unique name. Names are case-insensitive; existing saves cannot be overwritten or deleted through the app.
-- **Server library** works before opening a local file. Loading opens a browser copy; the server copy remains unchanged.
+- **Load from server** opens the saved-file library. It is available at the top of the page before opening any file, and beside **Save to server** in the workspace. Choose **Load** next to a saved name to reopen it. Loading opens a browser copy; the server copy remains unchanged.
 - Records persist in `data/shared-library`, excluded from Git. Back up this directory and retain it across deployments. Internal `.gsa` files contain metadata and Lua; use **Download Lua** for the installable file.
 - `LIBRARY_DIR` changes the storage location. Relative paths resolve from the server working directory. The service user needs write access there.
 - Lua uploads are limited to 20 MiB. Shared files are intended for trusted guild users; this app does not provide private storage, accounts, or abuse quotas. Use existing proxy access controls if your server needs restricted access.

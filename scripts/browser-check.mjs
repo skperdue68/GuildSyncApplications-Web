@@ -16,7 +16,11 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}), errors=[]
 page.on('pageerror',e=>errors.push(e.message));
 page.on('dialog',d=>d.accept());
 try {
- await page.goto(origin); await page.getByRole('button',{name:'Try sample workspace'}).click();
+ await page.goto(origin);
+ await page.getByRole('button',{name:'Load from server',exact:true}).click({timeout:3000});
+ await page.getByText('No shared files yet.',{exact:false}).waitFor();
+ await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+ await page.getByRole('button',{name:'Try sample workspace'}).click();
  await page.getByRole('button',{name:'+ New message',exact:true}).click();
  await page.getByLabel('Template name').fill('Browser welcome');
  await page.getByLabel('Message text').fill('Welcome {name}!');
@@ -40,7 +44,7 @@ try {
  const s=doc.Default['@ExampleAccount'].$AccountWide.settings;
  assert.ok(Object.values(s.welcomeMessages).some(e=>e.title==='Browser welcome' && e.message==='Welcome {name}!'));
  assert.ok(Object.values(s.welcomeEmails).some(e=>e.subject==='Hello {name}'));
- await page.getByRole('button',{name:'Server library',exact:true}).click();
+ await page.locator('.toolbar-actions').getByRole('button',{name:'Load from server',exact:true}).click();
  await page.getByRole('button',{name:'Load Browser test',exact:true}).click();
  await page.getByRole('tab',{name:'Welcome chat',exact:false}).click();
  await page.getByRole('button',{name:'+ New message',exact:true}).click();
@@ -72,7 +76,7 @@ try {
  let releaseLoad;
  const loadGate=new Promise(resolve=>{releaseLoad=resolve;});
  await page.route('**/api/library/*',async route=>{const response=await route.fetch();await loadGate;await route.fulfill({response});});
- await page.getByRole('button',{name:'Server library',exact:true}).click();
+ await page.locator('#library').click();
  const getStarted=page.waitForRequest(request=>request.url().includes('/api/library/'));
  await page.getByRole('button',{name:'Load Browser test',exact:true}).click();await getStarted;
  await page.getByRole('button',{name:'Close dialog',exact:true}).click();
@@ -96,7 +100,7 @@ try {
  assert.equal(imported.Default['@Import'].$AccountWide.settings.welcomeMessages[1].useCount,12);
  assert.equal(imported.Default['@Other'].$AccountWide.records.keep,true);
  assert.equal(imported.Default['@Import'].$AccountWide.settings.welcomeMessages[1].title,'Imported edited');
- await page.getByRole('button',{name:'Server library',exact:true}).click();
+ await page.locator('#library').click();
  await page.getByRole('button',{name:'Load Browser test',exact:true}).click();
  await mkdir('browser-temp',{recursive:true});
  await page.screenshot({path:'browser-temp/desktop.png',fullPage:true});

@@ -9,7 +9,7 @@
 <body>
   <header class="masthead">
     <a class="brand" href="/" aria-label="GuildSyncApplications Welcome Studio home"><img src="/logo.svg" alt=""><span><strong>GuildSync<span>Applications</span></strong><small>WELCOME STUDIO</small></span></a>
-    <div class="header-actions"><span class="browser-badge"><i></i> Browser editor</span><button id="help">How it works</button><button id="library">Server library</button></div>
+    <div class="header-actions"><span class="browser-badge"><i></i> Browser editor</span><button id="help">How it works</button><button id="library">Load from server</button></div>
   </header>
   <section class="hero">
     <div><p class="eyebrow">A PLACE IN THE FAMILY</p><h1>Every great guild starts<br>with a warm welcome.</h1><p>Craft the first hello. Make it feel like home.</p></div>
@@ -22,7 +22,7 @@
       <div class="steps"><article><b>01</b><div><h3>Bring your file</h3><p>Open GuildSyncApplications.lua from your ESO SavedVariables folder.</p></div></article><article><b>02</b><div><h3>Find your voice</h3><p>Edit welcome messages and emails. Preview each greeting with a member’s name.</p></div></article><article><b>03</b><div><h3>Welcome them in</h3><p>Save a shared copy or download your updated Lua file for ESO.</p></div></article></div>
     </section>
     <section id="workspace" hidden>
-      <div class="workspace-toolbar"><div class="profile-group"><label>ESO account<select id="account"></select></label><span id="file-state" class="quiet">No changes</span></div><div class="toolbar-actions"><button id="open-another">Open file</button><button id="save-server">Save to server</button><button id="download" class="gold">Download Lua <span aria-hidden="true">↓</span></button></div></div>
+      <div class="workspace-toolbar"><div class="profile-group"><label>ESO account<select id="account"></select></label><span id="file-state" class="quiet">No changes</span></div><div class="toolbar-actions"><button id="open-another">Open file</button><button id="load-server">Load from server</button><button id="save-server">Save to server</button><button id="download" class="gold">Download Lua <span aria-hidden="true">↓</span></button></div></div>
       <div class="workspace-grid">
         <aside class="panel library-panel"><div class="panel-heading"><div><p class="eyebrow">YOUR COLLECTION</p><h2>Welcome library</h2></div><span id="total-count" class="count">0</span></div>
           <div class="tabs" role="tablist" aria-label="Template category"><button id="tab-message" role="tab" aria-selected="true">Welcome chat <span id="chat-count">0</span></button><button id="tab-email" role="tab" aria-selected="false">Welcome emails <span id="email-count">0</span></button></div>
