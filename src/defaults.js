@@ -50,3 +50,5 @@ export const starterTemplates = {
     }
   ]
 };
+// Catalog identities stay stable across accounts and edits; addon numeric IDs remain local.
+for(const kind of ['message','email'])starterTemplates[kind].forEach((template,index)=>{template.webTemplateId=`gsa-starter:${kind}:${index+1}`;});

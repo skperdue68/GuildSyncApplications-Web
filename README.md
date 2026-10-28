@@ -12,6 +12,20 @@ npm start
 
 Open http://127.0.0.1:4174. Try the sample workspace to explore, open your latest SavedVariables, or start a new file for a fresh installation.
 
+## Download the standalone ESO add-on
+
+Choose **Download add-on ZIP** at the top of the page to download `GuildSyncApplications.zip`. It contains the **GuildSyncApplications 1.4.3** add-on Lua file, manifest and installation instructions. Extract its `GuildSyncApplications` folder into `Documents/Elder Scrolls Online/live/AddOns/` and install **LibAddonMenu-2.0** separately (for example through Minion). No GuildSync backend, desktop client or Discord bot is required.
+
+The ZIP is add-on software, without personal account settings. **Download Lua** in the editor instead exports your edited SavedVariables; that file belongs in `live/SavedVariables/`, with ESO closed. Do not put edited SavedVariables into the AddOns folder.
+
+The bundled files originate from [GuildSyncApplications 1.4.3](https://github.com/skperdue68/GuildSync/tree/master/ESO/GuildSyncApplications), Lua blob `b5e13a345ebee5d6ebb453eb5ca2ce57e94b3016` and manifest blob `6ac8a4b8808cc2689d0ca578013ee44036c9e3d7`. Developers can rebuild the ZIP from an add-on source folder with `python scripts/package-addon.py /path/to/GuildSyncApplications`. Python is not needed to run the site or download the bundled ZIP.
+
+## Template identity and duplicate prevention
+
+Templates created by the web editor receive a permanent `webTemplateId`, saved in Lua and retained when imported into another account or customized. The add-on's numeric `id` remains local to each account, avoiding collisions with existing templates. An intentional **Duplicate** creates a new permanent identity.
+
+Starter and server import lists hide templates already in the selected destination account and show how many were hidden. Matching permanent IDs prevent re-adding a template even after its wording changes. Exact chat text or email subject/body matching also prevents duplicates in older files without permanent IDs. Legacy server entries derive a repeatable identity from their source account, category and original entry ID when imported. Deleted templates can be added again.
+
 ## Edit and install
 
 1. Open `Documents/Elder Scrolls Online/live/SavedVariables/GuildSyncApplications.lua`. Choose the SavedVariables file; the add-on source has the same filename and is not editable here.

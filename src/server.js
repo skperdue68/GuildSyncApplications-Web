@@ -7,6 +7,7 @@ import { createLibraryStore, LibraryError } from './library-store.js';
 const MAX_REQUEST_BYTES = 40 * 1024 * 1024 + 16384;
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../public");
 const paths = {
+  "/downloads/GuildSyncApplications.zip": ["downloads/GuildSyncApplications.zip", "application/zip"],
   "/": ["index.html", "text/html"],
   "/style.css": ["style.css", "text/css"],
   "/app.js": ["app.js", "text/javascript"],
@@ -80,7 +81,8 @@ export function createServer(options={}) {
     try {
       const data = await readFile(resolve(root, file[0]));
       res.writeHead(200, {
-        "Content-Type": file[1] + "; charset=utf-8",
+        "Content-Type": file[1] === 'application/zip' ? file[1] : file[1] + "; charset=utf-8",
+        ...(file[1] === 'application/zip' ? {'Content-Disposition':'attachment; filename="GuildSyncApplications.zip"','Content-Length':data.length} : {}),
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy":

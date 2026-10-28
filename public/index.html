@@ -9,7 +9,7 @@
 <body>
   <header class="masthead">
     <a class="brand" href="/" aria-label="GuildSyncApplications Welcome Studio home"><img src="/logo.svg" alt=""><span><strong>GuildSync<span>Applications</span></strong><small>WELCOME STUDIO</small></span></a>
-    <div class="header-actions"><span class="browser-badge"><i></i> Browser editor</span><button id="help">How it works</button><button id="library">Load from server</button></div>
+    <div class="header-actions"><span class="browser-badge"><i></i> Browser editor</span><a class="button" href="/downloads/GuildSyncApplications.zip" download="GuildSyncApplications.zip">Download add-on ZIP</a><button id="help">How it works</button><button id="library">Load from server</button></div>
   </header>
   <section class="hero">
     <div><p class="eyebrow">A PLACE IN THE FAMILY</p><h1>Every great guild starts<br>with a warm welcome.</h1><p>Craft the first hello. Make it feel like home.</p></div>
@@ -19,7 +19,7 @@
   <main>
     <section id="landing">
       <div class="intro"><span class="eyebrow">THE WELCOME, WITHOUT THE WORKAROUND</span><h2>Your words. A little more room.</h2><p>Create and refine your guild’s welcome chat and in-game mail, all outside the add-on editor.</p><div class="landing-actions"><label class="button gold" tabindex="0">Open SavedVariables<input id="open" type="file" accept=".lua,.txt" hidden></label><button id="new">Start a new file</button></div><button class="text-button" id="sample">Try sample workspace <span aria-hidden="true">↗</span></button></div>
-      <div class="steps"><article><b>01</b><div><h3>Bring your file</h3><p>Open GuildSyncApplications.lua from your ESO SavedVariables folder.</p></div></article><article><b>02</b><div><h3>Find your voice</h3><p>Edit welcome messages and emails. Preview each greeting with a member’s name.</p></div></article><article><b>03</b><div><h3>Welcome them in</h3><p>Save a shared copy or download your updated Lua file for ESO.</p></div></article></div>
+      <div class="steps"><article><b>01</b><div><h3>Bring your file</h3><p>Open GuildSyncApplications.lua from your ESO SavedVariables folder, or start a new file.</p></div></article><article><b>02</b><div><h3>Find your voice</h3><p>Edit welcome messages and emails. Preview each greeting with a member’s name.</p></div></article><article><b>03</b><div><h3>Welcome them in</h3><p>Save a shared copy or download your updated Lua file for ESO.</p></div></article></div>
     </section>
     <section id="workspace" hidden>
       <div class="workspace-toolbar"><div class="profile-group"><label>ESO account<select id="account"></select></label><span id="file-state" class="quiet">No changes</span></div><div class="toolbar-actions"><button id="open-another">Open file</button><button id="load-server">Load from server</button><button id="import-server">Import templates from server</button><button id="save-server">Save to server</button><button id="download" class="gold">Download Lua <span aria-hidden="true">↓</span></button></div></div>

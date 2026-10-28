@@ -1,5 +1,5 @@
 import {parseSavedVariables} from '/lua-data.js';
-import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,byteLength,preview,importTemplates} from '/model.js';
+import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,byteLength,preview,importTemplates,hasTemplate,addTemplate,sourceTemplateId} from '/model.js';
 import {starterTemplates} from '/defaults.js';
 
 const $=id=>document.getElementById(id);
@@ -94,7 +94,7 @@ bind('new','click',()=>{
 });
 bind('sample','click',()=>{
  if(!canReplace())return;const doc=newDocument('@ExampleAccount'),p=profiles(doc)[0];
- for(const kind of ['message','email'])for(const template of starterTemplates[kind])addEntry(p,kind,{...template,enabled:true});
+ for(const kind of ['message','email'])for(const template of starterTemplates[kind])addTemplate(p,kind,{...template,enabled:true});
  loadDocument(doc,'Sample workspace · Example account only');
 });
 bind('account','change',event=>{
@@ -120,9 +120,13 @@ bind('delete','click',()=>{
 });
 bind('starters','click',()=>{
  applyDraft();showDialog('A little inspiration',`<p>Optional Alphabet Mafia starters from the add-on. Add a copy to your current account and make it your own. Existing templates stay as they are.</p><div id="starter-list"></div>${dialogError}`);
- for(const template of starterTemplates[state.kind]){
+ const available=starterTemplates[state.kind].filter(template=>!hasTemplate(current(),state.kind,template));
+ const hidden=starterTemplates[state.kind].length-available.length;
+ $('starter-list').append(el('p',`${hidden} already-added templates hidden for ${current().account}.`,'hint'));
+ if(!available.length)$('starter-list').append(el('p','All starter templates in this category have already been added to this account.'));
+ for(const template of available){
   const card=el('article',undefined,'starter');card.append(el('h3',template.title),el('p',template.message||template.subject+'\n\n'+template.body));
-  const button=el('button','Use this starter');button.addEventListener('click',run(()=>{addEntry(current(),state.kind,{...template,enabled:true});state.selected=list().at(-1).key;state.changed=true;render();$('dialog').close();status('Starter added. Edit the wording to make it your own.');}));card.append(button);$('starter-list').append(card);
+  const button=el('button','Use this starter');button.addEventListener('click',run(()=>{addTemplate(current(),state.kind,{...template,enabled:true});state.selected=list().at(-1).key;state.changed=true;render();$('dialog').close();status('Starter added. Edit the wording to make it your own.');}));card.append(button);$('starter-list').append(card);
  }
 });
 bind('download','click',()=>{
@@ -187,7 +191,7 @@ function showTemplateImport(source,fileName){
  applyDraft();
  const destination=current(),destinationDoc=state.doc,sourceAccounts=profiles(source);
  if(!sourceAccounts.length)throw Error('This saved file has no account-wide templates.');
- showDialog('Choose welcome templates',`<p id="import-destination"></p><p>Copies get fresh IDs and usage history. Identical message text or email subject/body pairs are skipped. Existing templates are never replaced.</p><form id="import-form"><label>Source account<select id="import-account"></select></label><div id="import-choices"></div><p id="import-summary" class="hint"></p>${dialogError}<button id="confirm-import" class="gold">Import selected templates</button></form>`);
+ showDialog('Choose welcome templates',`<p id="import-destination"></p><p>Copies keep their permanent template IDs and get fresh local IDs and usage history. Already-added templates are hidden. Existing templates are never replaced.</p><form id="import-form"><label>Source account<select id="import-account"></select></label><div id="import-choices"></div><p id="import-summary" class="hint"></p>${dialogError}<button id="confirm-import" class="gold">Import selected templates</button></form>`);
  $('import-destination').textContent=`From ${fileName} into ${destination.label}. Only welcome templates are copied; application records and account settings stay yours.`;
  $('import-account').replaceChildren(...sourceAccounts.map((p,i)=>{const option=el('option',p.label);option.value=i;return option;}));
  function choices(){
@@ -195,8 +199,11 @@ function showTemplateImport(source,fileName){
   const sourceProfile=sourceAccounts[Number($('import-account').value)];
   for(const kind of ['message','email']){
    const section=el('section',undefined,'import-category');section.append(el('h3',kind==='message'?'Welcome chat':'Welcome emails'));
-   const items=entries(sourceProfile,kind);
-   if(!items.length)section.append(el('p','No templates in this category.','hint'));
+   const all=entries(sourceProfile,kind);
+   const items=all.filter(({key,entry})=>!hasTemplate(destination,kind,{...entry,webTemplateId:sourceTemplateId(sourceProfile,kind,entry,key)}));
+   const hidden=all.length-items.length;
+   if(hidden)section.append(el('p',`${hidden} already-added templates hidden in this category.`,'hint'));
+   if(!items.length)section.append(el('p',all.length?'All templates in this category have already been added.':'No templates in this category.','hint'));
    for(const {key,entry} of items){
     const label=el('label',undefined,'check import-choice'),checkbox=el('input');checkbox.type='checkbox';checkbox.checked=true;checkbox.dataset.kind=kind;checkbox.value=key;
     const copy=el('span');copy.append(el('strong',entry.title||`Welcome ${kind} ${entry.id||key}`),el('small',(entry.enabled===false?'Disabled · ':'')+(entry.message||entry.subject+'\n'+entry.body)));
