@@ -137,11 +137,11 @@ bind('download','click',()=>{
 async function request(path,options){const response=await fetch(path,options);if(!response.ok){let message;try{message=(await response.json()).error;}catch{}const error=Error(message||'Unable to reach the shared server library.');error.status=response.status;throw error;}return response;}
 bind('save-server','click',()=>{
  applyDraft();exportDocument(state.doc);
- showDialog('Save a shared copy',`<p>Everyone using this site can load this complete file, including account names, application records and usage history. Reuse a name to replace that server copy after confirmation, or choose a new name to keep both versions. Names are case-insensitive.</p><form id="save-form"><label>Save name<input id="save-name" maxlength="120" placeholder="Apollonia · Welcome messages" required></label><label class="check"><input id="shared-consent" type="checkbox" required><span>I understand this file is shared</span></label>${dialogError}<button id="confirm-save" class="gold">Save shared copy</button></form>`);
+ showDialog('Save a shared copy',`<p>Everyone using this site can load this complete file, including account names, application records and usage history. Reuse a name to replace that server copy after confirmation, or choose a new name to keep both versions. Names are case-insensitive.</p><form id="save-form"><label>Save name<input id="save-name" maxlength="120" placeholder="Apollonia · Welcome messages" required></label><label>Overwrite password (optional)<input id="save-password" type="password" autocomplete="off" maxlength="1024" aria-describedby="password-help"></label><p id="password-help" class="hint">For a new or unprotected save, set a password to protect future overwrites. For a protected save, enter its existing password. Leave blank for no protection. Loading and importing remain shared.</p><label class="check"><input id="shared-consent" type="checkbox" required><span>I understand this file is shared</span></label>${dialogError}<button id="confirm-save" class="gold">Save shared copy</button></form>`);
  $('save-form').addEventListener('submit',run(async event=>{
-  event.preventDefault();const form=event.currentTarget,button=$('confirm-save'),savedDocument=state.doc,lua=exportDocument(state.doc),name=$('save-name').value;button.disabled=true;
+  event.preventDefault();const form=event.currentTarget,button=$('confirm-save'),savedDocument=state.doc,lua=exportDocument(state.doc),name=$('save-name').value,password=$('save-password').value;button.disabled=true;
   try{
-   const save=overwrite=>request('/api/library',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,lua,overwrite})});
+   const save=overwrite=>request('/api/library',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,lua,overwrite,password})});
    try{await save(false);}
    catch(error){
     if(error.status!==409)throw error;
@@ -166,7 +166,7 @@ async function openLibrary(mode='load'){
  $('dialog-body').replaceChildren(el('p',mode==='import'?'Choose a saved file to copy welcome messages and emails into your current account. Your own records and existing templates stay in place.':'Complete configurations shared by this site’s users. Load opens the complete saved file. Import templates copies selected wording into your currently open account.'));
  if(!data.files.length)$('dialog-body').append(el('p','No shared files yet. Open or create a file, then choose Save to server.'));
  for(const file of data.files){
-  const row=el('div',undefined,'library-row'),copy=el('div');copy.append(el('strong',file.name),el('small',new Date(file.updatedAt || file.createdAt).toLocaleString()+' · '+Math.ceil(file.bytes/1024)+' KB'));
+  const row=el('div',undefined,'library-row'),copy=el('div');copy.append(el('strong',file.name),el('small',new Date(file.updatedAt || file.createdAt).toLocaleString()+' · '+Math.ceil(file.bytes/1024)+' KB'+(file.passwordProtected?' · Password required to overwrite':'')));
   const button=el('button',mode==='import'?'Choose templates':'Load');button.setAttribute('aria-label',(mode==='import'?'Choose templates from ':'Load ')+file.name);button.addEventListener('click',run(async()=>{
    button.disabled=true;
    try{
