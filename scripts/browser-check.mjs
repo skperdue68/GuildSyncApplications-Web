@@ -14,7 +14,8 @@ const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 const browser=await chromium.launch({headless:true,executablePath:process.env.BROWSER_PATH || (existsSync(chrome)?chrome:undefined)});
 const page=await browser.newPage({viewport:{width:1440,height:1000}}), errors=[];
 page.on('pageerror',e=>errors.push(e.message));
-page.on('dialog',d=>d.accept());
+let acceptDialogs=true;
+page.on('dialog',d=>acceptDialogs?d.accept():d.dismiss());
 try {
  await page.goto(origin);
  await page.getByRole('button',{name:'Load from server',exact:true}).click({timeout:3000});
@@ -145,6 +146,28 @@ try {
  await page.locator('#library').click();
  await page.getByRole('button',{name:'Load Browser test',exact:true}).click();
  await mkdir('browser-temp',{recursive:true});
+ // Same-name saves ask before replacing and keep the original when cancelled.
+ const savedList=await(await fetch(origin+'/api/library')).json();
+ const savedFile=savedList.files.find(file=>file.name==='Browser test');
+ const originalServerLua=await(await fetch(origin+'/api/library/'+savedFile.id)).text();
+ await page.getByLabel('Message text').fill('Updated server welcome {name}');
+ await page.getByRole('button',{name:'Apply changes',exact:true}).click();
+ await page.getByRole('button',{name:'Save to server',exact:true}).click();
+ await page.getByLabel('Save name').fill('BROWSER TEST');
+ await page.getByLabel('I understand this file is shared').check();
+ acceptDialogs=false;
+ await page.getByRole('button',{name:'Save shared copy',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('Overwrite cancelled'));
+ assert.equal(await(await fetch(origin+'/api/library/'+savedFile.id)).text(),originalServerLua);
+ assert.equal(await page.locator('#file-state').innerText(),'Changes in this session');
+ acceptDialogs=true;
+ await page.getByRole('button',{name:'Save shared copy',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('Saved to server'));
+ const overwritten=await(await fetch(origin+'/api/library/'+savedFile.id)).text();
+ assert.match(overwritten,/Updated server welcome/);
+ const overwrittenList=await(await fetch(origin+'/api/library')).json();
+ assert.equal(overwrittenList.files.filter(file=>file.name.toLowerCase()==='browser test').length,1);
+ assert.equal(overwrittenList.files.find(file=>file.id===savedFile.id).createdAt,savedFile.createdAt);
  await page.screenshot({path:'browser-temp/desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No mobile horizontal overflow');
