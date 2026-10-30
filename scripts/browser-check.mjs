@@ -170,7 +170,10 @@ try {
  assert.equal(overwrittenList.files.find(file=>file.id===savedFile.id).createdAt,savedFile.createdAt);
  // Protect an existing unprotected save, then require its password for future writes.
  await page.getByRole('button',{name:'Save to server',exact:true}).click();
- await page.getByLabel('Save name').fill('Browser test');
+ const nameBeforePick=await page.getByLabel('Template name').inputValue();
+ await page.getByRole('button',{name:'Use saved name BROWSER TEST',exact:true}).click({timeout:3000});
+ assert.equal(await page.getByLabel('Save name').inputValue(),'BROWSER TEST');
+ assert.equal(await page.getByLabel('Template name').inputValue(),nameBeforePick);
  await page.getByLabel('Overwrite password (optional)',{exact:true}).fill('browser-secret');
  await page.getByLabel('I understand this file is shared').check();
  await page.getByRole('button',{name:'Save shared copy',exact:true}).click();
@@ -179,7 +182,10 @@ try {
  await page.getByLabel('Message text').fill('Password-authorized update {name}');
  await page.getByRole('button',{name:'Apply changes',exact:true}).click();
  await page.getByRole('button',{name:'Save to server',exact:true}).click();
- await page.getByLabel('Save name').fill('Browser test');
+ await page.getByLabel('Overwrite password (optional)',{exact:true}).fill('discard-when-changing-name');
+ await page.getByRole('button',{name:'Use saved name BROWSER TEST',exact:true}).click();
+ assert.equal(await page.getByLabel('Overwrite password (optional)',{exact:true}).inputValue(),'');
+ assert.match(await page.locator('#save-name-hint').innerText(),/existing password/i);
  await page.getByLabel('I understand this file is shared').check();
  await page.getByRole('button',{name:'Save shared copy',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('#dialog-error').textContent.includes('password is missing or incorrect'));
@@ -193,6 +199,18 @@ try {
  await page.locator('#dialog').waitFor({state:'hidden'});
  assert.match(await(await fetch(origin+'/api/library/'+savedFile.id)).text(),/Password-authorized update/);
  assert.equal(await page.getByLabel('Preview account name').inputValue(),'@Apollonia');
+ await page.getByRole('button',{name:'Save to server',exact:true}).click();
+ await page.getByRole('button',{name:'Use saved name BROWSER TEST',exact:true}).click();
+ await page.screenshot({path:'browser-temp/save-dialog.png',fullPage:true});
+ await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+ // A failed library listing must not prevent typing a new save name.
+ await page.route('**/api/library',route=>route.request().method()==='GET'?route.abort():route.continue());
+ await page.getByRole('button',{name:'Save to server',exact:true}).click();
+ await page.getByText('Unable to list saved names. You can still type a name above.',{exact:true}).waitFor();
+ await page.getByLabel('Save name').fill('New typed save');
+ assert.equal(await page.getByLabel('Save name').inputValue(),'New typed save');
+ await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+ await page.unroute('**/api/library');
  await page.screenshot({path:'browser-temp/desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No mobile horizontal overflow');

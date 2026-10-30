@@ -137,7 +137,7 @@ bind('download','click',()=>{
 async function request(path,options){const response=await fetch(path,options);if(!response.ok){let message;try{message=(await response.json()).error;}catch{}const error=Error(message||'Unable to reach the shared server library.');error.status=response.status;throw error;}return response;}
 bind('save-server','click',()=>{
  applyDraft();exportDocument(state.doc);
- showDialog('Save a shared copy',`<p>Everyone using this site can load this complete file, including account names, application records and usage history. Reuse a name to replace that server copy after confirmation, or choose a new name to keep both versions. Names are case-insensitive.</p><form id="save-form"><label>Save name<input id="save-name" maxlength="120" placeholder="Apollonia · Welcome messages" required></label><label>Overwrite password (optional)<input id="save-password" type="password" autocomplete="off" maxlength="1024" aria-describedby="password-help"></label><p id="password-help" class="hint">For a new or unprotected save, set a password to protect future overwrites. For a protected save, enter its existing password. Leave blank for no protection. Loading and importing remain shared.</p><label class="check"><input id="shared-consent" type="checkbox" required><span>I understand this file is shared</span></label>${dialogError}<button id="confirm-save" class="gold">Save shared copy</button></form>`);
+ showDialog('Save a shared copy',`<p>Everyone using this site can load this complete file, including account names, application records and usage history. Reuse a name to replace that server copy after confirmation, or choose a new name to keep both versions. Names are case-insensitive.</p><form id="save-form"><label>Save name<input id="save-name" maxlength="120" placeholder="Apollonia · Welcome messages" aria-describedby="save-name-hint" required></label><p id="save-name-hint" class="hint">Enter a new name, or choose a saved name below.</p><details class="saved-names" open><summary>Use an existing saved name</summary><div id="saved-name-list" role="group" aria-label="Existing saved names"><p class="hint">Loading saved names…</p></div></details><label>Overwrite password (optional)<input id="save-password" type="password" autocomplete="off" maxlength="1024" aria-describedby="password-help"></label><p id="password-help" class="hint">For a new or unprotected save, set a password to protect future overwrites. For a protected save, enter its existing password. Leave blank for no protection. Loading and importing remain shared.</p><label class="check"><input id="shared-consent" type="checkbox" required><span>I understand this file is shared</span></label>${dialogError}<button id="confirm-save" class="gold">Save shared copy</button></form>`);
  $('save-form').addEventListener('submit',run(async event=>{
   event.preventDefault();const form=event.currentTarget,button=$('confirm-save'),savedDocument=state.doc,lua=exportDocument(state.doc),name=$('save-name').value,password=$('save-password').value;button.disabled=true;
   try{
@@ -156,7 +156,36 @@ bind('save-server','click',()=>{
   }
   finally{button.disabled=false;}
  }));
+ populateSaveNames($('save-form'));
 });
+async function populateSaveNames(form){
+ const container=$('saved-name-list'),input=$('save-name'),hint=$('save-name-hint');
+ try{
+  const {files}=await(await request('/api/library')).json();
+  if(!$('dialog').open||$('save-form')!==form)return;
+  const buttons=[];
+  const normalized=name=>name.trim().toLowerCase().normalize('NFC');
+  function updateSelection(){
+   const match=files.find(file=>normalized(file.name)===normalized(input.value));
+   buttons.forEach(({button,file})=>button.setAttribute('aria-pressed',String(file===match)));
+   hint.textContent=match?(match.passwordProtected?'This name is protected. Enter its existing password to overwrite it.':'This name already exists. Saving will ask to replace it; an optional password will protect future overwrites.'):'Enter a new name, or choose a saved name below.';
+  }
+  for(const file of files){
+   const button=el('button',undefined,'saved-name');button.type='button';button.setAttribute('aria-label','Use saved name '+file.name);
+   button.append(el('strong',file.name),el('small',file.passwordProtected?'Password-protected':'No overwrite password'));
+   button.addEventListener('click',()=>{
+    input.value=file.name;$('save-password').value='';$('dialog-error').textContent='';updateSelection();
+    if(file.passwordProtected)$('save-password').focus();else input.focus();
+   });
+   buttons.push({button,file});
+  }
+  container.replaceChildren(...buttons.map(item=>item.button));
+  if(!files.length)container.append(el('p','No server saves yet. Enter a new name above.','hint'));
+  input.addEventListener('input',updateSelection);updateSelection();
+ }catch{
+  if($('dialog').open&&$('save-form')===form)container.replaceChildren(el('p','Unable to list saved names. You can still type a name above.','hint'));
+ }
+}
 async function openLibrary(mode='load'){
  if(mode==='import')applyDraft();
  showDialog(mode==='import'?'Import templates from server':'Shared server library','<p>Loading saved files…</p>');
