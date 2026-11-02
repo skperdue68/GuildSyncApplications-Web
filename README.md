@@ -72,7 +72,8 @@ Legacy shared files are sanitized when loaded, but existing files on disk are no
 - **Load from server** opens the saved-file library. It is available at the top of the page before opening any file, and beside **Save to server** in the workspace. Choose **Load** next to a saved name to reopen it. Loading opens a browser copy; the server copy remains unchanged.
 - Records persist in `data/shared-library`, excluded from Git. Back up this directory and retain it across deployments. Internal `.gsa` files contain metadata and Lua; use **Download Lua** for the installable file.
 - `LIBRARY_DIR` changes the storage location. Relative paths resolve from the server working directory. The service user needs write access there.
-- Lua uploads are limited to 20 MiB. Shared files are intended for trusted guild users; this app does not provide private storage, accounts, or abuse quotas. Use existing proxy access controls if your server needs restricted access.
+- Lua uploads are limited to 20 MiB and are checked in a background thread with a 15-second limit, so a large upload cannot freeze the site. By default the library holds at most **500 saved files and 512 MiB in total** (`LIBRARY_MAX_FILES`, `LIBRARY_MAX_BYTES`); when it is full, new names are refused with a clear message while existing files can still be replaced. After **5 wrong overwrite passwords** for one saved file, overwrites of that file are refused for about 15 minutes. A damaged record in the library directory is skipped (and logged) instead of breaking the list.
+- Shared files are intended for trusted guild users; this app does not provide private storage or accounts. Use existing proxy access controls if your server needs restricted access.
 
 ## Host alongside SCM-Web
 
@@ -83,6 +84,9 @@ HOST=127.0.0.1
 PORT=4174
 PUBLIC_ORIGIN=https://YOUR-GSA-HOSTNAME
 LIBRARY_DIR=data/shared-library
+# Optional shared-library limits (defaults shown):
+# LIBRARY_MAX_FILES=500
+# LIBRARY_MAX_BYTES=536870912
 ```
 
 Configure DNS and HTTPS for the hostname you choose, then point your reverse proxy at `http://127.0.0.1:4174`. Preserve the original Host header. Example Nginx location inside the matching HTTPS server block:

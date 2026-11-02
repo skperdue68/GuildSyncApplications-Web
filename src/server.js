@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve, dirname } from "node:path";
-import { createLibraryStore, LibraryError } from './library-store.js';
+import { createLibraryStore, LibraryError, DEFAULT_MAX_FILES, DEFAULT_MAX_BYTES } from './library-store.js';
 const MAX_REQUEST_BYTES = 40 * 1024 * 1024 + 16384;
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../public");
 const paths = {
@@ -20,11 +20,12 @@ export function readConfig(env=process.env){
  const host=env.HOST||'127.0.0.1',port=Number(env.PORT||4174);let publicOrigin='';
  if(!Number.isInteger(port)||port<1||port>65535)throw Error('PORT must be 1-65535.');
  if(env.PUBLIC_ORIGIN){const value=new URL(env.PUBLIC_ORIGIN);if(!['http:','https:'].includes(value.protocol)||value.username||value.password||value.pathname!=='/'||value.search||value.hash)throw Error('PUBLIC_ORIGIN must be an HTTP(S) origin without a path or credentials.');publicOrigin=value.origin;}
- return {host,port,publicOrigin,libraryDir:resolve(env.LIBRARY_DIR || 'data/shared-library')};
+ const positive=(value,fallback,name)=>{if(value===undefined||value==='')return fallback;const number=Number(value);if(!Number.isInteger(number)||number<1)throw Error(`${name} must be a positive whole number.`);return number;};
+ return {host,port,publicOrigin,libraryDir:resolve(env.LIBRARY_DIR || 'data/shared-library'),libraryMaxFiles:positive(env.LIBRARY_MAX_FILES,DEFAULT_MAX_FILES,'LIBRARY_MAX_FILES'),libraryMaxBytes:positive(env.LIBRARY_MAX_BYTES,DEFAULT_MAX_BYTES,'LIBRARY_MAX_BYTES')};
 }
 export function createServer(options={}) {
-  const config=readConfig({HOST:options.host,PORT:options.port,PUBLIC_ORIGIN:options.publicOrigin,LIBRARY_DIR:options.libraryDir});
-  const library = createLibraryStore(config.libraryDir);
+  const config=readConfig({HOST:options.host,PORT:options.port,PUBLIC_ORIGIN:options.publicOrigin,LIBRARY_DIR:options.libraryDir,LIBRARY_MAX_FILES:options.libraryMaxFiles,LIBRARY_MAX_BYTES:options.libraryMaxBytes});
+  const library = createLibraryStore(config.libraryDir,{maxFiles:config.libraryMaxFiles,maxBytes:config.libraryMaxBytes});
   const publicHost=config.publicOrigin?new URL(config.publicOrigin).host.toLowerCase():null;
   return http.createServer(async (req, res) => {
     const host = (req.headers.host || "").toLowerCase();
@@ -86,8 +87,11 @@ export function createServer(options={}) {
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy":
-          "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+          "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
         "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
       });
       res.end(req.method === "HEAD" ? undefined : data);
     } catch {
