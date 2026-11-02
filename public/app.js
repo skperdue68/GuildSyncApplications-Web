@@ -1,5 +1,5 @@
 import {parseSavedVariables} from '/lua-data.js';
-import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,byteLength,preview,importTemplates,hasTemplate,addTemplate,sourceTemplateId} from '/model.js';
+import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,exportServerDocument,captureApplicationData,setCaptureApplicationData,byteLength,preview,importTemplates,hasTemplate,addTemplate,sourceTemplateId} from '/model.js';
 import {starterTemplates} from '/defaults.js';
 
 const $=id=>document.getElementById(id);
@@ -49,6 +49,7 @@ function renderList(){
  $('template-list').replaceChildren(...nodes);
 }
 function render(){
+ $('capture-applications').checked=captureApplicationData(current());
  const items=list();if(state.selected===undefined && items.length)state.selected=items[0].key;
  renderList();const item=items.find(x=>x.key===state.selected)?.entry;
  const show=state.selected===null||!!item;$('editor').hidden=!show;$('editor-empty').hidden=show;
@@ -74,7 +75,7 @@ function renderPreview(){
 }
 function showDialog(title,html){$('dialog-title').textContent=title;$('dialog-body').innerHTML=html;$('dialog').showModal();}
 const dialogError='<p id="dialog-error" class="dialog-error" role="alert"></p>';
-function help(){showDialog('From your browser to your guild',`<p>This editor changes welcome chat messages and in-game emails for GuildSyncApplications. It does not send messages or connect to ESO.</p><ol><li>Use your newest <code>GuildSyncApplications.lua</code> from <code>Documents/Elder Scrolls Online/live/SavedVariables</code>. The add-on’s source file has the same name; choose the one in SavedVariables.</li><li>Select your ESO account. Edit or create templates, then choose <b>Apply changes</b>. Use <code>{name}</code> for the applicant’s ESO account name.</li><li><b>Save to server</b> stores a complete copy in the shared library. Everyone using this site can load it, including account names and application records.</li><li><b>Download Lua</b> creates an updated <code>GuildSyncApplications.lua</code>. Close ESO, back up your original SavedVariables file, then replace it with the download. Check that the browser did not add a number to its filename.</li></ol><p>Always start from the latest file after playing ESO: downloading an older workspace can replace newer application records and usage history. A new file is best for a fresh install; open an existing file to preserve its records.</p><p>Compatible with GuildSyncApplications 1.4.3 settings. Existing message and email pools remain separate; enabled entries are available to the add-on.</p>`);}
+function help(){showDialog('From your browser to your guild',`<p>This editor changes welcome chat messages and in-game emails for GuildSyncApplications. It does not send messages or connect to ESO.</p><ol><li>Use your newest <code>GuildSyncApplications.lua</code> from <code>Documents/Elder Scrolls Online/live/SavedVariables</code>. The add-on’s source file has the same name; choose the one in SavedVariables.</li><li>Select your ESO account. Edit or create templates, then choose <b>Apply changes</b>. Use <code>{name}</code> for the applicant’s ESO account name.</li><li><b>Save to server</b> shares a configuration copy with empty application-record sections. Account names, templates and usage history remain shared; actual application records are omitted. Your workspace and personal Lua download keep their records.</li><li><b>Download Lua</b> creates an updated <code>GuildSyncApplications.lua</code>. Close ESO, back up your original SavedVariables file, then replace it with the download. Check that the browser did not add a number to its filename.</li></ol><p>Always start from the latest file after playing ESO: downloading an older workspace can replace newer application records and usage history. A new file is best for a fresh install; open an existing file to preserve its records.</p><p>Compatible with existing GuildSyncApplications settings. The capture option requires add-on version 1.4.5 or newer. Existing message and email pools remain separate; enabled entries are available to the add-on.</p>`);}
 bind('help','click',help);bind('install-help','click',help);bind('close-dialog','click',()=>$('dialog').close());
 bind('open','change',async event=>{
  const file=event.target.files[0];event.target.value='';if(!file)return;
@@ -100,6 +101,10 @@ bind('sample','click',()=>{
 bind('account','change',event=>{
  const index=Number(event.target.value);
  try{applyDraft();state.profile=index;state.selected=undefined;$('search').value='';render();}catch(error){event.target.value=state.profile;throw error;}
+});
+bind('capture-applications','change',event=>{
+ setCaptureApplicationData(current(),event.target.checked);state.changed=true;updateState();
+ status(event.target.checked?'Application-data capture enabled for this account. Download Lua to apply it in ESO.':'Application-data capture disabled for this account. Existing records stay in your personal file; welcome messages and emails remain available. Download Lua to apply it in ESO.');
 });
 for(const kind of ['message','email'])bind('tab-'+kind,'click',()=>{applyDraft();state.kind=kind;state.selected=undefined;$('search').value='';render();});
 bind('search','input',renderList);
@@ -136,10 +141,10 @@ bind('download','click',()=>{
 });
 async function request(path,options){const response=await fetch(path,options);if(!response.ok){let message;try{message=(await response.json()).error;}catch{}const error=Error(message||'Unable to reach the shared server library.');error.status=response.status;throw error;}return response;}
 bind('save-server','click',()=>{
- applyDraft();exportDocument(state.doc);
- showDialog('Save a shared copy',`<p>Everyone using this site can load this complete file, including account names, application records and usage history. Reuse a name to replace that server copy after confirmation, or choose a new name to keep both versions. Names are case-insensitive.</p><form id="save-form"><label>Save name<input id="save-name" maxlength="120" placeholder="Apollonia · Welcome messages" aria-describedby="save-name-hint" required></label><p id="save-name-hint" class="hint">Enter a new name, or choose a saved name below.</p><details class="saved-names" open><summary>Use an existing saved name</summary><div id="saved-name-list" role="group" aria-label="Existing saved names"><p class="hint">Loading saved names…</p></div></details><label>Overwrite password (optional)<input id="save-password" type="password" autocomplete="off" maxlength="1024" aria-describedby="password-help"></label><p id="password-help" class="hint">For a new or unprotected save, set a password to protect future overwrites. For a protected save, enter its existing password. Leave blank for no protection. Loading and importing remain shared.</p><label class="check"><input id="shared-consent" type="checkbox" required><span>I understand this file is shared</span></label>${dialogError}<button id="confirm-save" class="gold">Save shared copy</button></form>`);
+ applyDraft();exportServerDocument(state.doc);
+ showDialog('Save a shared copy',`<p>Everyone using this site can load the shared configuration, including account names, templates and usage history. Actual application records are omitted; their empty sections remain. Your workspace and personal Lua download keep those records. Reuse a name to replace that server copy after confirmation, or choose a new name to keep both versions. Names are case-insensitive.</p><form id="save-form"><label>Save name<input id="save-name" maxlength="120" placeholder="Apollonia · Welcome messages" aria-describedby="save-name-hint" required></label><p id="save-name-hint" class="hint">Enter a new name, or choose a saved name below.</p><details class="saved-names" open><summary>Use an existing saved name</summary><div id="saved-name-list" role="group" aria-label="Existing saved names"><p class="hint">Loading saved names…</p></div></details><label>Overwrite password (optional)<input id="save-password" type="password" autocomplete="off" maxlength="1024" aria-describedby="password-help"></label><p id="password-help" class="hint">For a new or unprotected save, set a password to protect future overwrites. For a protected save, enter its existing password. Leave blank for no protection. Loading and importing remain shared.</p><label class="check"><input id="shared-consent" type="checkbox" required><span>I understand this file is shared</span></label>${dialogError}<button id="confirm-save" class="gold">Save shared copy</button></form>`);
  $('save-form').addEventListener('submit',run(async event=>{
-  event.preventDefault();const form=event.currentTarget,button=$('confirm-save'),savedDocument=state.doc,lua=exportDocument(state.doc),name=$('save-name').value,password=$('save-password').value;button.disabled=true;
+  event.preventDefault();const form=event.currentTarget,button=$('confirm-save'),savedDocument=state.doc,lua=exportServerDocument(state.doc),name=$('save-name').value,password=$('save-password').value;button.disabled=true;
   try{
    const save=overwrite=>request('/api/library',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,lua,overwrite,password})});
    try{await save(false);}
@@ -149,7 +154,7 @@ bind('save-server','click',()=>{
     if(!confirm(`A shared file named "${name.trim()}" already exists. Replace it with this version? Everyone using the site will see the replacement.`)){status('Overwrite cancelled. The existing server file has not changed.');return;}
     await save(true);
    }
-   const unchanged=state.doc===savedDocument&&!state.draftDirty&&exportDocument(state.doc)===lua;
+   const unchanged=state.doc===savedDocument&&!state.draftDirty&&exportServerDocument(state.doc)===lua;
    if(unchanged)state.changed=false;
    updateState();if($('save-form')===form)$('dialog').close();
    status(unchanged?'Saved to server. Your named copy is now available in the shared library.':'Saved the submitted version to server. Your newer workspace changes still need saving or downloading.');
@@ -217,7 +222,7 @@ async function openLibrary(mode='load'){
   }
   row.append(copy,actions);$('dialog-body').append(row);
  }
- $('dialog-body').append(el('p','Shared copies include complete account data. Download and install while ESO is closed.'));
+ $('dialog-body').append(el('p','Shared copies omit application records. Download and install while ESO is closed.'));
 }
 bind('library','click',()=>openLibrary());
 bind('import-server','click',()=>openLibrary('import'));

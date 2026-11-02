@@ -76,16 +76,34 @@ export function newDocument(account) {
   if(!/^@[^\s\p{Cc}]{1,100}$/u.test(account)) throw Error('Enter your ESO account name, starting with @.');
   const doc=Object.create(null), accounts=Object.create(null);
   doc.Default=accounts;
-  accounts[account]={$AccountWide:{version:1,records:{},settings:{welcomeMessages:{},welcomeEmails:{},nextWelcomeMessageId:1,nextWelcomeEmailId:1,welcomeMessagePickSequence:0,welcomeEmailPickSequence:0,welcomeDefaultsInitialized:true}}};
+  accounts[account]={$AccountWide:{version:1,records:{},settings:{captureApplicationData:true,welcomeMessages:{},welcomeEmails:{},nextWelcomeMessageId:1,nextWelcomeEmailId:1,welcomeMessagePickSequence:0,welcomeEmailPickSequence:0,welcomeDefaultsInitialized:true}}};
   return doc;
 }
 export function exportDocument(doc) {
   const accounts=profiles(doc);
   if(!accounts.length) throw Error('No account-wide GuildSyncApplications profiles found. Open the SavedVariables file, not addon source code.');
+  for(const p of accounts){const value=settings(p).captureApplicationData;if(value!==undefined&&typeof value!=='boolean')throw Error(`${p.account}: application-data capture must be a boolean.`);}
   for(const p of accounts) for(const kind of ['message','email']) for(const {entry} of entries(p,kind)) {
     try { validateEntry(kind,entry); } catch(error) { throw Error(`${p.account}: ${entry.title || kind}: ${error.message}`); }
   }
   return writeSavedVariables(doc);
+}
+
+export function captureApplicationData(profile){return settings(profile).captureApplicationData!==false;}
+export function setCaptureApplicationData(profile,enabled){
+  if(typeof enabled!=='boolean')throw Error('Application-data capture must be a boolean.');
+  const s=settings(profile);if(!profile.data.settings)setLuaValue(profile.data,'settings',s);
+  setLuaValue(s,'captureApplicationData',enabled);
+}
+export function exportServerDocument(doc){
+  function sanitized(value,depth=0){
+    if(depth>100)throw Error('Table nesting limit exceeded');
+    if(!value||typeof value!=='object')return value;
+    const copy=Object.create(null);
+    for(const [key,item] of Object.entries(value))setLuaValue(copy,key,key==='records'?Object.create(null):sanitized(item,depth+1),isLuaNumericKey(value,key));
+    return copy;
+  }
+  return exportDocument(sanitized(doc));
 }
 
 export function importTemplates(target, source, selection) {

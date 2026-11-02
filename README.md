@@ -14,11 +14,11 @@ Open http://127.0.0.1:4174. Try the sample workspace to explore, open your lates
 
 ## Download the standalone ESO add-on
 
-Choose **Download add-on ZIP** at the top of the page to download `GuildSyncApplications.zip`. It contains the **GuildSyncApplications 1.4.3** add-on Lua file, manifest and installation instructions. Extract its `GuildSyncApplications` folder into `Documents/Elder Scrolls Online/live/AddOns/` and install **LibAddonMenu-2.0** separately (for example through Minion). No GuildSync backend, desktop client or Discord bot is required.
+Choose **Download add-on ZIP** at the top of the page to download `GuildSyncApplications.zip`. It contains the **GuildSyncApplications 1.4.5** add-on Lua file, manifest and installation instructions. Extract its `GuildSyncApplications` folder into `Documents/Elder Scrolls Online/live/AddOns/` and install **LibAddonMenu-2.0** separately (for example through Minion). No GuildSync backend, desktop client or Discord bot is required.
 
 The ZIP is add-on software, without personal account settings. **Download Lua** in the editor instead exports your edited SavedVariables; that file belongs in `live/SavedVariables/`, with ESO closed. Do not put edited SavedVariables into the AddOns folder.
 
-The bundled files originate from [GuildSyncApplications 1.4.3](https://github.com/skperdue68/GuildSync/tree/master/ESO/GuildSyncApplications), Lua blob `b5e13a345ebee5d6ebb453eb5ca2ce57e94b3016` and manifest blob `6ac8a4b8808cc2689d0ca578013ee44036c9e3d7`. Developers can rebuild the ZIP from an add-on source folder with `python scripts/package-addon.py /path/to/GuildSyncApplications`. Python is not needed to run the site or download the bundled ZIP.
+The bundled files originate from [GuildSyncApplications 1.4.5](https://github.com/skperdue68/GuildSync/tree/d20d5c366e3b09c18a1df3ac76e9659111b521bd/ESO/GuildSyncApplications), commit `d20d5c366e3b09c18a1df3ac76e9659111b521bd`. Developers can rebuild the ZIP from an add-on source folder with `python scripts/package-addon.py /path/to/GuildSyncApplications`. Python is not needed to run the site or download the bundled ZIP.
 
 The ZIP contains Lua code that runs inside your game, so verify what you downloaded. Its SHA-256 checksum is committed in [`public/downloads/SHA256SUMS`](public/downloads/SHA256SUMS). Check a downloaded copy with `sha256sum GuildSyncApplications.zip` (macOS: `shasum -a 256`; Windows PowerShell: `Get-FileHash GuildSyncApplications.zip`) and compare it with that file in this repository. `npm test` fails if the bundled ZIP and `SHA256SUMS` ever disagree, and rebuilding with `scripts/package-addon.py` rewrites both together.
 
@@ -42,6 +42,14 @@ Imported unknown fields, other accounts, application records, IDs and usage hist
 
 ## Shared server library
 
+### Application-data capture
+
+**Capture application data** is an account setting in both `/gsa settings` and the web workspace. It defaults to enabled, including older files without the setting. Disable it for standalone welcome chat and email use without saving new accepted/rejected applications. Existing records are retained; disabling does not erase them or disable welcomes. Re-enable it to resume capture.
+
+**If you use this add-on with GuildSync, leave application-data capture enabled so application data can be copied automatically to Discord.**
+
+The web setting is applied in ESO only after you download/install the edited Lua while ESO is closed. This option requires the matching **GuildSyncApplications 1.4.5** add-on. The bundled ZIP includes it. Template imports do not change the recipient's capture setting.
+
 ### Copy someone else's templates into your own file
 
 1. Open **your own** latest `GuildSyncApplications.lua` and select your account.
@@ -52,7 +60,9 @@ Imported unknown fields, other accounts, application records, IDs and usage hist
 
 For a blank configuration this fills its welcome library without bringing over the writer's account data. **Load from server** continues to open an entire saved file; use **Import templates from server** to merge wording into your own account.
 
-Like SCM-Web, this library has **no logins**. Everyone using the site can load saved files. **Save to server uploads the complete Lua file**, including account names, application records and usage history. The save dialog requires explicit acknowledgement. Opening and editing local files stays in your browser until that action.
+Like SCM-Web, this library has **no logins**. Everyone using the site can load saved configurations. **Save to server omits actual application records**, leaving their `records` sections empty. Account names, templates, settings and template usage history remain shared. The browser removes records before upload, and the server independently enforces removal for older clients. Your active workspace and personal **Download Lua** keep their application records unchanged.
+
+Legacy shared files are sanitized when loaded, but existing files on disk are not silently rewritten. Overwriting a saved configuration stores the sanitized copy; keep or remove historical server backups according to your own retention needs. The save dialog requires explicit acknowledgement. Opening and editing local files stays in your browser until that action.
 
 - Save under a friendly name. Names are case-insensitive; reusing a name asks you to confirm replacing that shared server file. Cancel leaves the previous copy intact. Choose a different name if you want to keep both versions. File deletion is not offered.
 - In **Save to server**, click an existing saved name to fill **Save name** automatically. This selects only the destination name; it never loads the saved file or changes your current edits. The list marks password-protected saves and clears the password field when you choose a destination. You can still type a new name to save a separate copy.
@@ -122,4 +132,4 @@ The browser check uses installed Chrome on Windows, or Playwright Chromium elsew
 
 The Node tests cover Lua byte preservation, Unicode, unsafe input rejection, account and record preservation, template operations, UTF-8 validation, public-origin rules and shared-library persistence. The browser test exercises previews, chat/email editing, shared save/load, downloads, invalid drafts and a mobile viewport.
 
-Compatible with the settings structure in GuildSyncApplications **1.4.3**. This app edits templates only; it does not send chat or mail, manage guild applications, or fix the in-game settings editor.
+Compatible with existing GuildSyncApplications **1.4.3+** settings; the capture toggle requires **1.4.5**. This app edits configuration only; it does not send chat or mail, manage guild applications, or fix the in-game settings editor.

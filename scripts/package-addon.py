@@ -5,13 +5,15 @@ The build requires Python; running the web server does not.
 """
 from pathlib import Path
 import hashlib
+import re
 import sys
 import zipfile
 
 source = Path(sys.argv[1]).resolve()
 output = Path(__file__).resolve().parents[1] / 'public' / 'downloads' / 'GuildSyncApplications.zip'
 files = {name: (source / name).read_bytes() for name in ('GuildSyncApplications.lua', 'GuildSyncApplications.txt')}
-files['README.txt'] = b'''GuildSyncApplications 1.4.3 - standalone ESO add-on
+version = re.search(r'^## Version:\s*(\S+)', files['GuildSyncApplications.txt'].decode('utf-8'), re.MULTILINE).group(1)
+files['README.txt'] = f'''GuildSyncApplications {version} - standalone ESO add-on
 
 1. Close ESO. Extract the GuildSyncApplications folder into:
    Documents/Elder Scrolls Online/live/AddOns/
@@ -24,6 +26,10 @@ files['README.txt'] = b'''GuildSyncApplications 1.4.3 - standalone ESO add-on
    With ESO closed, back up and replace:
    Documents/Elder Scrolls Online/live/SavedVariables/GuildSyncApplications.lua
    The downloaded settings file belongs in SavedVariables, not AddOns.
+5. For standalone welcomes without recording applications, turn off Capture
+   application data in /gsa settings or the web editor and install its Lua.
+   If you use this add-on with GuildSync, leave application-data capture enabled
+   so application data can be copied automatically to Discord.
 
 This ZIP contains add-on software only, with no player accounts or records.
 For an existing installation, do not delete or replace your SavedVariables
@@ -31,8 +37,8 @@ when updating the add-on folder. Use /gsa settings for in-game settings.
 
 Original author: @evainefaye
 Source: https://github.com/skperdue68/GuildSync/tree/master/ESO/GuildSyncApplications
-Bundled version: 1.4.3. LibAddonMenu-2.0 is not included.
-'''
+Bundled version: {version}. LibAddonMenu-2.0 is not included.
+'''.encode('utf-8')
 output.parent.mkdir(parents=True, exist_ok=True)
 with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
     for name, content in files.items():
