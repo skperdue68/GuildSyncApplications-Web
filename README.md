@@ -20,6 +20,8 @@ The ZIP is add-on software, without personal account settings. **Download Lua** 
 
 The bundled files originate from [GuildSyncApplications 1.4.3](https://github.com/skperdue68/GuildSync/tree/master/ESO/GuildSyncApplications), Lua blob `b5e13a345ebee5d6ebb453eb5ca2ce57e94b3016` and manifest blob `6ac8a4b8808cc2689d0ca578013ee44036c9e3d7`. Developers can rebuild the ZIP from an add-on source folder with `python scripts/package-addon.py /path/to/GuildSyncApplications`. Python is not needed to run the site or download the bundled ZIP.
 
+The ZIP contains Lua code that runs inside your game, so verify what you downloaded. Its SHA-256 checksum is committed in [`public/downloads/SHA256SUMS`](public/downloads/SHA256SUMS). Check a downloaded copy with `sha256sum GuildSyncApplications.zip` (macOS: `shasum -a 256`; Windows PowerShell: `Get-FileHash GuildSyncApplications.zip`) and compare it with that file in this repository. `npm test` fails if the bundled ZIP and `SHA256SUMS` ever disagree, and rebuilding with `scripts/package-addon.py` rewrites both together.
+
 ## Template identity and duplicate prevention
 
 Templates created by the web editor receive a permanent `webTemplateId`, saved in Lua and retained when imported into another account or customized. The add-on's numeric `id` remains local to each account, avoiding collisions with existing templates. An intentional **Duplicate** creates a new permanent identity.

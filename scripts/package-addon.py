@@ -4,6 +4,7 @@ Usage: python scripts/package-addon.py /path/to/GuildSyncApplications
 The build requires Python; running the web server does not.
 """
 from pathlib import Path
+import hashlib
 import sys
 import zipfile
 
@@ -39,4 +40,6 @@ with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         info.compress_type = zipfile.ZIP_DEFLATED
         info.external_attr = 0o100644 << 16
         archive.writestr(info, content)
-print(f'Built {output.name} ({output.stat().st_size} bytes)')
+digest = hashlib.sha256(output.read_bytes()).hexdigest()
+(output.parent / 'SHA256SUMS').write_bytes(f'{digest}  {output.name}\n'.encode('utf-8'))
+print(f'Built {output.name} ({output.stat().st_size} bytes, sha256 {digest})')
