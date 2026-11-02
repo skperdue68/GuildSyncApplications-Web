@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { createHash, randomUUID, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { parseSavedVariables } from './lua-data.js';
-import { exportDocument } from './model.js';
+import { exportServerDocument } from './model.js';
 
 export const MAX_LUA_BYTES = 20 * 1024 * 1024;
 export class LibraryError extends Error {
@@ -55,10 +55,11 @@ export function createLibraryStore(directory) {
       name = name.trim().normalize('NFC');
       if (!name || [...name].length > 120 || /\p{Cc}/u.test(name)) throw new LibraryError(400, 'Use a name of 1–120 characters without control characters.');
       if (typeof lua !== 'string') throw new LibraryError(400, 'Provide SavedVariables Lua text.');
-      const bytes = Buffer.byteLength(lua, 'utf8');
-      if (bytes > MAX_LUA_BYTES) throw new LibraryError(413, 'SavedVariables must be at most 20 MiB.');
-      try { exportDocument(parseSavedVariables(lua)); }
+      if (Buffer.byteLength(lua, 'utf8') > MAX_LUA_BYTES) throw new LibraryError(413, 'SavedVariables must be at most 20 MiB.');
+      try { lua=exportServerDocument(parseSavedVariables(lua)); }
       catch(error) { throw new LibraryError(400, 'Provide valid GuildSyncApplications SavedVariables: ' + error.message); }
+      const bytes=Buffer.byteLength(lua,'utf8');
+      if(bytes>MAX_LUA_BYTES)throw new LibraryError(413,'SavedVariables must be at most 20 MiB.');
       const id = createHash('sha256').update(name.toLowerCase().normalize('NFC')).digest('hex');
       return serializedWrite(filename(id),async()=>{
       const now=new Date().toISOString();
@@ -100,7 +101,8 @@ export function createLibraryStore(directory) {
       catch (error) { if (error.code === 'ENOENT') throw new LibraryError(404, 'Shared file not found.'); throw error; }
       const newline = data.indexOf(10);
       if (newline < 0) throw Error('Invalid library record');
-      return data.subarray(newline + 1);
+      // Legacy disk records are not rewritten, but their application data is not shared.
+      return Buffer.from(exportServerDocument(parseSavedVariables(data.subarray(newline+1).toString('utf8'))),'utf8');
     },
   };
 }

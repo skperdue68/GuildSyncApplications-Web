@@ -17,7 +17,8 @@ test('standalone ZIP downloads with addon folder, manifest, code and dependency 
    files.set(name,(method===8?inflateRawSync(compressed):compressed).toString('utf8'));offset=start+size;
   }
   assert.deepEqual([...files.keys()].sort(),['GuildSyncApplications/GuildSyncApplications.lua','GuildSyncApplications/GuildSyncApplications.txt','GuildSyncApplications/README.txt']);
-  assert.match(files.get('GuildSyncApplications/GuildSyncApplications.lua'),/GSA.version = "1.4.3"/);
+  assert.match(files.get('GuildSyncApplications/GuildSyncApplications.lua'),/GSA.version = "1.4.5"/);
+  assert.match(files.get('GuildSyncApplications/GuildSyncApplications.lua'),/captureApplicationData/);
   assert.match(files.get('GuildSyncApplications/GuildSyncApplications.txt'),/## DependsOn: LibAddonMenu-2.0/);
   assert.match(files.get('GuildSyncApplications/README.txt'),/SavedVariables/);
  }finally{await new Promise(resolve=>server.close(resolve));}
