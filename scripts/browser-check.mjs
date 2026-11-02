@@ -105,17 +105,34 @@ try {
  await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('invalid UTF-8'));
  assert.equal(await page.getByLabel('Template name').inputValue(),'Newer title during load');
  // Import actual SavedVariables rather than just exercising the sample.
- const input='GuildSyncApplications = { Default = { ["@Import"] = { ["$AccountWide"] = { version=1,records={[7]={status="accepted"}},settings={welcomeMessages={[1]={id=4,title="Imported",message="Hello",useCount=12}},welcomeEmails={}} } }, ["@Other"] = {["$AccountWide"]={version=1,records={keep=true},settings={}}} } }';
+ const input='GuildSyncApplications = { Default = { ["@Import"] = { ["$AccountWide"] = { version=1,records={[7]={status="accepted",applicant="@PrivateRecruit"}},settings={welcomeMessages={[1]={id=4,title="Imported",message="Hello",useCount=12}},welcomeEmails={}} } }, ["@Other"] = {["$AccountWide"]={version=1,records={keep=true},settings={}}} } }';
  await page.locator('#open').setInputFiles({name:'GuildSyncApplications.lua',mimeType:'text/plain',buffer:Buffer.from(input)});
  await page.getByLabel('Template name').fill('Imported edited');
+ assert.equal(await page.getByRole('checkbox',{name:'Capture application data',exact:true}).isChecked(),true);
+ await page.getByRole('checkbox',{name:'Capture application data',exact:true}).uncheck();
+ assert.equal(await page.getByLabel('Template name').inputValue(),'Imported edited');
  const importedDownload=page.waitForEvent('download');await page.getByRole('button',{name:'Download Lua',exact:true}).click();
  const imported=parseSavedVariables(await readFile(await (await importedDownload).path(),'utf8'));
  assert.equal(imported.Default['@Import'].$AccountWide.records[7].status,'accepted');
  assert.equal(imported.Default['@Import'].$AccountWide.settings.welcomeMessages[1].useCount,12);
  assert.equal(imported.Default['@Other'].$AccountWide.records.keep,true);
  assert.equal(imported.Default['@Import'].$AccountWide.settings.welcomeMessages[1].title,'Imported edited');
+ assert.equal(imported.Default['@Import'].$AccountWide.settings.captureApplicationData,false);
+ await page.getByRole('button',{name:'Save to server',exact:true}).click();
+ await page.getByLabel('Save name').fill('No application records');
+ await page.getByLabel('I understand this file is shared').check();
+ const privacyUpload=page.waitForRequest(request=>request.method()==='POST'&&request.url().endsWith('/api/library'));
+ await page.getByRole('button',{name:'Save shared copy',exact:true}).click();
+ const upload=await privacyUpload;
+ assert.doesNotMatch(upload.postDataJSON().lua,/@PrivateRecruit/);
+ assert.equal(Object.keys(parseSavedVariables(upload.postDataJSON().lua).Default['@Import'].$AccountWide.records).length,0);
+ await page.locator('#dialog').waitFor({state:'hidden'});
+ const personalAfterSave=page.waitForEvent('download');await page.getByRole('button',{name:'Download Lua',exact:true}).click();
+ const personal=parseSavedVariables(await readFile(await(await personalAfterSave).path(),'utf8'));
+ assert.equal(personal.Default['@Import'].$AccountWide.records[7].applicant,'@PrivateRecruit');
  // Copy selected server wording into a blank recipient without copying the source account.
  await page.locator('#account').selectOption('1');
+ assert.equal(await page.getByRole('checkbox',{name:'Capture application data',exact:true}).isChecked(),true);
  await page.getByRole('button',{name:'Import templates from server',exact:true}).click();
  await page.getByRole('button',{name:'Choose templates from Browser test',exact:true}).click();
  assert.match(await page.locator('#import-destination').innerText(),/@Other/);
@@ -133,6 +150,7 @@ try {
  assert.equal(merged.Default['@Other'].$AccountWide.settings.welcomeMessages[1].useCount,0);
  assert.equal(merged.Default['@Other'].$AccountWide.settings.welcomeEmails[1].subject,'Hello {name}');
  assert.equal(merged.Default['@Import'].$AccountWide.settings.welcomeMessages[1].useCount,12);
+ assert.equal(merged.Default['@Import'].$AccountWide.settings.captureApplicationData,false);
  assert.equal(merged.Default['@ExampleAccount'],undefined);
  await page.getByLabel('Message text').fill('My personalized version of the borrowed welcome');
  await page.getByRole('button',{name:'Apply changes',exact:true}).click();

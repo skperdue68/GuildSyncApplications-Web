@@ -13,6 +13,14 @@ export class LibraryError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 const validId = id => /^[a-f0-9]{64}$/.test(id);
+// Maps a failure from validateLua to the error the API reports.
+function checkFailure(error) {
+  if (error.kind === 'busy') return new LibraryError(503, error.message);
+  if (error.kind === 'timeout') return new LibraryError(422, 'The file took too long to check. Use a smaller SavedVariables file.');
+  if (error.kind === 'memory') return new LibraryError(413, error.message);
+  if (error.kind === 'internal') return new LibraryError(500, error.message);
+  return new LibraryError(400, 'Provide valid GuildSyncApplications SavedVariables: ' + error.message);
+}
 const deriveKey=promisify(scrypt);
 const pendingWrites=new Map();
 async function serializedWrite(key,write){
@@ -85,16 +93,12 @@ export function createLibraryStore(directory, options = {}) {
       name = name.trim().normalize('NFC');
       if (!name || [...name].length > 120 || /\p{Cc}/u.test(name)) throw new LibraryError(400, 'Use a name of 1–120 characters without control characters.');
       if (typeof lua !== 'string') throw new LibraryError(400, 'Provide SavedVariables Lua text.');
-      const bytes = Buffer.byteLength(lua, 'utf8');
-      if (bytes > MAX_LUA_BYTES) throw new LibraryError(413, 'SavedVariables must be at most 20 MiB.');
-      try { await validateLua(lua); }
-      catch(error) {
-        if (error.kind === 'busy') throw new LibraryError(503, error.message);
-        if (error.kind === 'timeout') throw new LibraryError(422, 'The file took too long to check. Use a smaller SavedVariables file.');
-        if (error.kind === 'memory') throw new LibraryError(413, error.message);
-        if (error.kind === 'internal') throw new LibraryError(500, error.message);
-        throw new LibraryError(400, 'Provide valid GuildSyncApplications SavedVariables: ' + error.message);
-      }
+      if (Buffer.byteLength(lua, 'utf8') > MAX_LUA_BYTES) throw new LibraryError(413, 'SavedVariables must be at most 20 MiB.');
+      // Parsing and re-exporting (which drops application records) happens in a worker thread.
+      try { lua = await validateLua(lua); }
+      catch(error) { throw checkFailure(error); }
+      const bytes=Buffer.byteLength(lua,'utf8');
+      if(bytes>MAX_LUA_BYTES)throw new LibraryError(413,'SavedVariables must be at most 20 MiB.');
       const id = createHash('sha256').update(name.toLowerCase().normalize('NFC')).digest('hex');
       return serializedWrite(location,async()=>{
       const now=new Date().toISOString();
@@ -108,7 +112,8 @@ export function createLibraryStore(directory, options = {}) {
         try{original=await metadata(filename(id));}
         catch(error){if(error.code!=='ENOENT')throw error;}
       }
-      const file = { id, name, createdAt: original?.createdAt || now, updatedAt: now, bytes };
+      // bodySha256 lets load() recognise text this server already cleaned, so it need not be parsed again.
+      const file = { id, name, createdAt: original?.createdAt || now, updatedAt: now, bytes, bodySha256: createHash('sha256').update(lua, 'utf8').digest('hex') };
       if(original?.passwordHash){
         if(throttled(id))throw new LibraryError(429,'Too many incorrect passwords for this saved file. Try again in about 15 minutes. The saved file has not changed.');
         if(!password)throw new LibraryError(403,'The overwrite password is missing or incorrect. The saved file has not changed.');
@@ -144,7 +149,18 @@ export function createLibraryStore(directory, options = {}) {
       catch (error) { if (error.code === 'ENOENT') throw new LibraryError(404, 'Shared file not found.'); throw error; }
       const newline = data.indexOf(10);
       if (newline < 0) throw Error('Invalid library record');
-      return data.subarray(newline + 1);
+      let header;
+      try { header = JSON.parse(data.subarray(0, newline).toString('utf8')); } catch { header = {}; }
+      const body = data.subarray(newline + 1);
+      // Text identical to what this server stored after removing application data needs no more work.
+      if (typeof header.bodySha256 === 'string' && createHash('sha256').update(body).digest('hex') === header.bodySha256) return body;
+      // Legacy disk records are not rewritten, but their application data is not shared.
+      // Cleaning one means parsing it, which is done off the main thread.
+      try { return Buffer.from(await validateLua(body.toString('utf8')), 'utf8'); }
+      catch (error) {
+        if (error.kind === 'invalid') throw Error('Invalid library record');
+        throw checkFailure(error);
+      }
     },
   };
 }

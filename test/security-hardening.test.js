@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm,writeFile} from 'node:fs/promises';
+import {mkdtemp,rm,readFile,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createLibraryStore,PASSWORD_WINDOW_MS,MAX_FAILED_PASSWORDS} from '../src/library-store.js';
@@ -91,3 +91,21 @@ test('library limits are configurable and validated',()=>{
  for(const bad of ['0','-1','1.5','abc'])assert.throws(()=>readConfig({LIBRARY_MAX_FILES:bad}),/LIBRARY_MAX_FILES/);
  assert.throws(()=>readConfig({LIBRARY_MAX_BYTES:'0'}),/LIBRARY_MAX_BYTES/);
 });
+
+test('loading a large saved file does not block the event loop, for new and legacy records',()=>withDir(async dir=>{
+ const doc=parseSavedVariables(lua('@Big')),junk=Object.create(null);
+ for(let i=1;i<=12000;i++)junk[i]={id:i,name:'Applicant '+i,note:'x'.repeat(40),when:1700000000+i,ok:true};
+ doc.benchJunk=junk;
+ const store=createLibraryStore(dir),saved=await store.save('Big',writeSavedVariables(doc));
+ async function worstStall(){
+  let last=performance.now(),worst=0;
+  const timer=setInterval(()=>{const now=performance.now();worst=Math.max(worst,now-last);last=now;},20);
+  try{await store.load(saved.id);}finally{clearInterval(timer);}
+  return worst;
+ }
+ assert.ok(await worstStall()<400,'Loading a record this server saved stalled the event loop.');
+ // A legacy record has no body hash, so it is cleaned on the fly, off the main thread.
+ const path=join(dir,saved.id+'.gsa'),disk=await readFile(path,'utf8'),newline=disk.indexOf('\n'),header=JSON.parse(disk.slice(0,newline));
+ delete header.bodySha256;await writeFile(path,JSON.stringify(header)+disk.slice(newline),'utf8');
+ assert.ok(await worstStall()<400,'Loading a legacy record stalled the event loop.');
+}));
