@@ -18,7 +18,9 @@ Choose **Download add-on ZIP** at the top of the page to download `GuildSyncAppl
 
 The ZIP is add-on software, without personal account settings. **Download Lua** in the editor instead exports your edited SavedVariables; that file belongs in `live/SavedVariables/`, with ESO closed. Do not put edited SavedVariables into the AddOns folder.
 
-The bundled files originate from [GuildSyncApplications 1.4.5](https://github.com/skperdue68/GuildSync/tree/d20d5c366e3b09c18a1df3ac76e9659111b521bd/ESO/GuildSyncApplications), commit `d20d5c366e3b09c18a1df3ac76e9659111b521bd`. Developers can rebuild the ZIP from an add-on source folder with `python scripts/package-addon.py /path/to/GuildSyncApplications`. Python is not needed to run the site or download the bundled ZIP.
+The bundled files originate from [GuildSyncApplications 1.4.5](https://github.com/skperdue68/GuildSync/tree/d921510/ESO/GuildSyncApplications), commit `d921510`. Developers can rebuild the ZIP from an add-on source folder with `python scripts/package-addon.py /path/to/GuildSyncApplications`. Python is not needed to run the site or download the bundled ZIP.
+
+The bundled update retains separate application captures when an account leaves and rejoins, including captures awaiting upload. Failed acceptances preserve older records. Install the updated add-on folder and use `/reloadui`; preserve your existing SavedVariables. Turning application capture off still preserves records and welcome behavior.
 
 The ZIP contains Lua code that runs inside your game, so verify what you downloaded. Its SHA-256 checksum is committed in [`public/downloads/SHA256SUMS`](public/downloads/SHA256SUMS). Check a downloaded copy with `sha256sum GuildSyncApplications.zip` (macOS: `shasum -a 256`; Windows PowerShell: `Get-FileHash GuildSyncApplications.zip`) and compare it with that file in this repository. `npm test` fails if the bundled ZIP and `SHA256SUMS` ever disagree, and rebuilding with `scripts/package-addon.py` rewrites both together.
 
