@@ -28,11 +28,14 @@ test('optional password protects overwrite without hiding shared files or leakin
  }finally{await rm(dir,{recursive:true,force:true});}
 });
 
-test('an unprotected save can acquire a password and concurrent writes cannot bypass protection',async()=>{
+test('an unprotected save can acquire a password and concurrent protected overwrites enforce it',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'gsa-password-race-'));
  try{
   const a=createLibraryStore(dir),b=createLibraryStore(dir),lua=exportDocument(newDocument('@Example'));
   const file=await a.save('Example',lua);
+  // Validation runs in workers, so invocation order does not establish write order.
+  // Install protection first, then verify both concurrent requests against that state.
+  await a.save('example',lua,true,'secret');
   const results=await Promise.allSettled([a.save('example',lua,true,'secret'),b.save('EXAMPLE',lua,true)]);
   assert.equal(results[0].status,'fulfilled',results[0].reason?.stack);assert.equal(results[1].status,'rejected');assert.equal(results[1].reason.status,403);
   assert.equal((await a.list())[0].passwordProtected,true);
