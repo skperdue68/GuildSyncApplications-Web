@@ -62,9 +62,9 @@ try {
  await page.getByRole('button',{name:'Load Browser test',exact:true}).click();
  await page.getByRole('tab',{name:'Welcome chat',exact:false}).click();
  await page.getByRole('button',{name:'+ New message',exact:true}).click();
- await page.getByLabel('Message text').fill('é'.repeat(168));
- await page.getByRole('button',{name:'Apply changes',exact:true}).click();
- await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('335'));
+ await page.getByLabel('Message text').fill('é'.repeat(336));
+ assert.equal([...(await page.getByLabel('Message text').inputValue())].length,335);
+ assert.match(await page.locator('#length').innerText(),/335 \/ 335 characters/);
  assert.equal(await page.locator('#draft-state').innerText(),'Unapplied changes');
  await page.getByRole('button',{name:'Discard draft',exact:true}).click();
  // A delayed save must not mark a newer edit as saved.

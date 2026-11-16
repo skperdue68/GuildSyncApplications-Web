@@ -156,7 +156,7 @@ export function createLibraryStore(directory, options = {}) {
       if (typeof header.bodySha256 === 'string' && createHash('sha256').update(body).digest('hex') === header.bodySha256) return body;
       // Legacy disk records are not rewritten, but their application data is not shared.
       // Cleaning one means parsing it, which is done off the main thread.
-      try { return Buffer.from(await validateLua(body.toString('utf8')), 'utf8'); }
+      try { return Buffer.from(await validateLua(body.toString('utf8'),{allowOversized:true}), 'utf8'); }
       catch (error) {
         if (error.kind === 'invalid') throw Error('Invalid library record');
         throw checkFailure(error);

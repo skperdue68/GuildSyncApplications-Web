@@ -23,6 +23,14 @@ test('server strips records even for old clients and serves legacy records as em
   await writeFile(path,legacy,'utf8');
   assert.doesNotMatch((await store.load(file.id)).toString(),/@PrivateRecruit|private application text/);
   assert.equal(await readFile(path,'utf8'),legacy);
+  const oversized=legacy.replace('welcomeEmails={}','welcomeEmails={[1]={subject="Legacy mail",body="'+'x'.repeat(701)+'"}}');
+  await writeFile(path,oversized,'utf8');
+  const oldCopy=parseSavedVariables((await store.load(file.id)).toString());
+  assert.equal(oldCopy.Default['@Officer'].$AccountWide.settings.welcomeEmails[1].body.length,701);
+  assert.equal(Object.keys(oldCopy.Default['@Officer'].$AccountWide.records).length,0);
+  await assert.rejects(store.save('Safe shared copy',oversized.slice(oversized.indexOf('\n')+1),true,'password'),error=>error.status===400);
+  assert.equal(await readFile(path,'utf8'),oversized);
+  await writeFile(path,legacy,'utf8');
   await assert.rejects(store.save('Safe shared copy',lua,true,'wrong'),error=>error.status===403);
   await store.save('Safe shared copy',lua,true,'password');
   assert.doesNotMatch(await readFile(path,'utf8'),/@PrivateRecruit|private application text/);

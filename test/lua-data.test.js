@@ -47,7 +47,7 @@ function literalBytes(literal) {
       index++;
       const digits=/^\d{1,3}/.exec(literal.slice(index));
       if(digits){bytes.push(Number(digits[0]));index+=digits[0].length;}
-      else {bytes.push(literal.charCodeAt(index++));}
+      else {const escapes={n:10,r:13,t:9,a:7,b:8,f:12,v:11};const character=literal[index++];bytes.push(escapes[character]??character.charCodeAt(0));}
     } else {
       const point=literal.codePointAt(index),character=String.fromCodePoint(point);
       bytes.push(...Buffer.from(character,'utf8'));index+=character.length;

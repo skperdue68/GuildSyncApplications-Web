@@ -30,6 +30,8 @@ files['README.txt'] = f'''GuildSyncApplications {version} - standalone ESO add-o
    application data in /gsa settings or the web editor and install its Lua.
    If you use this add-on with GuildSync, leave application-data capture enabled
    so application data can be copied automatically to Discord.
+6. This version counts the welcome chat limit as 335 UTF-8 characters, keeping
+   accented text and emoji intact and normalizing line endings to LF.
 
 This ZIP contains add-on software only, with no player accounts or records.
 For an existing installation, do not delete or replace your SavedVariables

@@ -1,10 +1,11 @@
 import {parseSavedVariables} from '/lua-data.js';
-import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,exportServerDocument,captureApplicationData,setCaptureApplicationData,byteLength,preview,importTemplates,hasTemplate,addTemplate,sourceTemplateId} from '/model.js';
+import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,exportServerDocument,captureApplicationData,setCaptureApplicationData,characterCount,normalizeNewlines,TEXT_LIMITS,constrainTextEdit,applyTemplateToAccounts,preview,importTemplates,hasTemplate,addTemplate,sourceTemplateId} from '/model.js';
 import {starterTemplates} from '/defaults.js';
 
 const $=id=>document.getElementById(id);
 const state={doc:null,profiles:[],profile:0,kind:'message',selected:undefined,draftDirty:false,changed:false};
 let lastField='content';
+const previousText=new Map();
 function status(message,error=false){$('status').textContent=message;$('status').classList.toggle('error',error);}
 function run(action){return async event=>{try{await action(event);}catch(error){status(error.message,true);const box=$('dialog-error');if(box)box.textContent=error.message;}};}
 function bind(id,event,action){$(id).addEventListener(event,run(action));}
@@ -14,14 +15,23 @@ const list=()=>entries(current(),state.kind);
 function updateState(){
  $('file-state').textContent=state.changed?'Changes in this session':'No unsaved file changes';
  $('draft-state').textContent=state.draftDirty?'Unapplied changes':'Applied';
+ $('apply').classList.toggle('needs-apply',state.draftDirty);
+ document.querySelector('.editor-panel').classList.toggle('has-unapplied',state.draftDirty);
+ if(state.doc)renderList();
 }
 function values(){return {title:$('title').value,enabled:$('enabled').checked,...(state.kind==='message'?{message:$('content').value}:{subject:$('subject').value,body:$('content').value})};}
 function applyDraft(){
  if(!state.doc || state.selected===undefined || !state.draftDirty)return;
  const v=values();validateEntry(state.kind,v);
- if(state.selected===null){addEntry(current(),state.kind,v);state.selected=list().at(-1).key;}
- else updateEntry(current(),state.kind,state.selected,v);
- state.draftDirty=false;state.changed=true;renderList();updateState();
+ const targets=[...$('apply-account-list').querySelectorAll('input:checked')].map(input=>Number(input.value));
+ const result=applyTemplateToAccounts(state.doc,state.profile,state.kind,state.selected,v,targets);
+ state.selected=result.sourceKey;
+ const saved=list().find(item=>item.key===state.selected).entry;
+ $('title').value=saved.title||'';$('content').value=(state.kind==='message'?saved.message:saved.body)||'';$('subject').value=saved.subject||'';
+ for(const id of ['content','subject'])previousText.set(id,$(id).value);
+ $('editor-heading').textContent='Edit your welcome';$('duplicate').disabled=false;$('delete').disabled=false;
+ state.draftDirty=false;state.changed=true;renderList();updateState();renderPreview();
+ return result;
 }
 function canReplace(){return !(state.changed||state.draftDirty)||confirm('Replace the current workspace? Download or save any changes you want to keep first.');}
 function loadDocument(doc,source){
@@ -38,13 +48,19 @@ function renderList(){
  $('chat-count').textContent=chat.length;$('email-count').textContent=email.length;$('total-count').textContent=chat.length+email.length;
  $('tab-message').setAttribute('aria-selected',String(state.kind==='message'));$('tab-email').setAttribute('aria-selected',String(state.kind==='email'));
  $('add').textContent=state.kind==='message'?'+ New message':'+ New email';
- const query=$('search').value.toLowerCase();const items=list().filter(({entry})=>[entry.title,entry.message,entry.subject,entry.body].some(v=>String(v||'').toLowerCase().includes(query)));
+ const query=$('search').value.toLowerCase();const items=list().filter(({key,entry})=>(state.draftDirty&&key===state.selected)||[entry.title,entry.message,entry.subject,entry.body].some(v=>String(v||'').toLowerCase().includes(query)));
  const nodes=items.map(({key,entry})=>{
-  const button=el('button',undefined,'template-item'+(key===state.selected?' active':''));button.type='button';button.setAttribute('aria-pressed',String(key===state.selected));
+  const pending=state.draftDirty&&key===state.selected,display=pending?{...entry,...values()}:entry;
+  const button=el('button',undefined,'template-item'+(key===state.selected?' active':'')+(pending?' pending':''));button.type='button';button.setAttribute('aria-pressed',String(key===state.selected));button.dataset.key=key;
   const dot=el('span',undefined,'dot'+(entry.enabled===false?' off':''));dot.setAttribute('aria-hidden','true');
-  const copy=el('span',undefined,'item-copy');copy.append(el('strong',entry.title||`Welcome ${state.kind} ${entry.id||key}`),el('small',(entry.enabled===false?'Disabled · ':'')+(entry.message||entry.subject||'')));
+  const copy=el('span',undefined,'item-copy');copy.append(el('strong',display.title||`Welcome ${state.kind} ${entry.id||key}`),el('small',(display.enabled===false?'Disabled · ':'')+(display.message||display.subject||'')));
+  if(pending)copy.append(el('span','Unapplied','draft-badge'));
   button.append(dot,copy);button.addEventListener('click',run(()=>{applyDraft();state.selected=key;render();}));return button;
  });
+ if(state.draftDirty&&state.selected===null){
+  const draft=el('div',undefined,'template-item active pending new-draft'),copy=el('span',undefined,'item-copy');
+  copy.append(el('strong',$('title').value||`New welcome ${state.kind}`),el('span','Unapplied','draft-badge'));draft.append(copy);nodes.unshift(draft);
+ }
  if(!nodes.length)nodes.push(el('p',query?'No templates match your search.':`No welcome ${state.kind==='message'?'messages':'emails'} yet. Create one or browse starter templates.`,'empty-list'));
  $('template-list').replaceChildren(...nodes);
 }
@@ -59,18 +75,29 @@ function render(){
   $('content-label').textContent=state.kind==='message'?'Message text':'Email body';$('subject-label').hidden=state.kind==='message';
   $('duplicate').disabled=!item;$('delete').disabled=!item;
  }
+ for(const id of ['content','subject'])previousText.set(id,$(id).value);
+ renderAccountTargets();
  updateState();renderPreview();
+}
+function renderAccountTargets(){
+ $('apply-targets').hidden=state.profiles.length<2;
+ $('apply-account-list').replaceChildren(...state.profiles.map((profile,index)=>{
+  const label=el('label',undefined,'check'),input=el('input');input.type='checkbox';input.value=index;input.checked=index===state.profile;input.disabled=index===state.profile;
+  input.setAttribute('aria-label','Apply to '+profile.label);label.append(input,el('span',profile.label+(index===state.profile?' (current)':'')));return label;
+ }));
 }
 function renderPreview(){
  const show=!$('editor').hidden,v=show?values():{},text=state.kind==='message'?v.message:v.body;
- const expanded=preview(text,$('preview-name').value);const bytes=byteLength(text||'');
+ const expanded=preview(text,$('preview-name').value),length=characterCount(text||''),limit=state.kind==='message'?TEXT_LIMITS.message:TEXT_LIMITS.body;
  $('preview-channel').textContent=state.kind==='message'?'GUILD CHAT · ALPHABET MAFIA':'IN-GAME MAIL · WELCOME LETTER';
  $('preview-content').textContent=show?expanded:'Your welcome will appear here.';
  $('preview-subject').hidden=state.kind==='message'||!show;$('preview-subject').textContent=preview(v.subject,$('preview-name').value);
- $('length').textContent=state.kind==='message'?`${bytes} / 335 bytes`:`${[...(text||'')].length} characters`;
- $('length').classList.toggle('over-limit',state.kind==='message'&&bytes>335);
- const tooLong=state.kind==='message'&&byteLength(expanded)>335;
- $('preview-warning').textContent=tooLong?'This preview exceeds 335 bytes after name substitution. Leave extra room for longer account names.':'Preview only. Messages are sent by the add-on inside ESO.';
+ $('length').textContent=`${length} / ${limit} characters`;
+ $('length').classList.toggle('over-limit',length>limit);
+ const subjectCount=characterCount(v.subject||'');$('subject-length').textContent=`${subjectCount} / ${TEXT_LIMITS.subject} characters`;$('subject-length').classList.toggle('over-limit',subjectCount>TEXT_LIMITS.subject);
+ const expandedOver=state.kind==='message'?characterCount(expanded)>TEXT_LIMITS.message:characterCount(expanded)>TEXT_LIMITS.body||characterCount(preview(v.subject,$('preview-name').value))>TEXT_LIMITS.subject;
+ const tooLong=length>limit||(state.kind==='email'&&subjectCount>TEXT_LIMITS.subject)||expandedOver;
+ $('preview-warning').textContent=length>limit||(state.kind==='email'&&subjectCount>TEXT_LIMITS.subject)?'This imported template exceeds a field limit. Shorten it before applying or downloading.':expandedOver?'Name substitution makes this preview exceed a field limit. Leave room for longer account names.':'Preview only. Messages are sent by the add-on inside ESO.';
  $('preview-warning').classList.toggle('over-limit',tooLong);
 }
 function showDialog(title,html){$('dialog-title').textContent=title;$('dialog-body').innerHTML=html;$('dialog').showModal();}
@@ -109,14 +136,45 @@ bind('capture-applications','change',event=>{
 for(const kind of ['message','email'])bind('tab-'+kind,'click',()=>{applyDraft();state.kind=kind;state.selected=undefined;$('search').value='';render();});
 bind('search','input',renderList);
 bind('add','click',()=>{applyDraft();state.selected=null;state.draftDirty=true;render();$('title').focus();});
-for(const id of ['title','content','subject','enabled'])bind(id,'input',()=>{state.draftDirty=true;updateState();renderPreview();});
+function markDraft(){state.draftDirty=true;updateState();renderPreview();}
+function constrainField(id,event){
+ const field=$(id),limit=id==='subject'?TEXT_LIMITS.subject:state.kind==='message'?TEXT_LIMITS.message:TEXT_LIMITS.body;
+ if(!event?.isComposing){
+  const position=field.selectionStart,next=constrainTextEdit(previousText.get(id)??'',field.value,limit);
+  if(next!==field.value){field.value=next;field.setSelectionRange(Math.min(position,next.length),Math.min(position,next.length));}
+  previousText.set(id,field.value);
+ }
+ markDraft();
+}
+for(const id of ['title','enabled'])bind(id,'input',markDraft);
+bind('apply-account-list','change',markDraft);
+for(const id of ['content','subject']){
+ bind(id,'input',event=>constrainField(id,event));
+ bind(id,'compositionend',()=>constrainField(id));
+ bind(id,'beforeinput',event=>{
+  if(event.isComposing||!event.cancelable||!event.inputType.startsWith('insert'))return;
+  const field=$(id),insert=event.inputType==='insertLineBreak'||event.inputType==='insertParagraph'?'\n':event.data;
+  if(insert===null||insert===undefined)return;
+  const candidate=field.value.slice(0,field.selectionStart)+normalizeNewlines(insert)+field.value.slice(field.selectionEnd);
+  const limit=id==='subject'?TEXT_LIMITS.subject:state.kind==='message'?TEXT_LIMITS.message:TEXT_LIMITS.body;
+  const bounded=constrainTextEdit(field.value,candidate,limit);
+  if(bounded!==candidate){
+   event.preventDefault();const start=field.selectionStart,suffixLength=field.value.length-field.selectionEnd;
+   const caret=Math.min(bounded.length,start+Math.max(0,bounded.length-start-suffixLength));
+   field.value=bounded;field.setSelectionRange(caret,caret);previousText.set(id,bounded);markDraft();
+  }
+ });
+}
 for(const id of ['content','subject'])bind(id,'focus',()=>{lastField=id;});
 bind('preview-name','input',renderPreview);
 bind('insert-name','click',()=>{
  const field=$(lastField==='subject'&&state.kind==='email'?'subject':'content');
- field.setRangeText('{name}',field.selectionStart,field.selectionEnd,'end');field.focus();state.draftDirty=true;updateState();renderPreview();
+ const limit=field.id==='subject'?TEXT_LIMITS.subject:state.kind==='message'?TEXT_LIMITS.message:TEXT_LIMITS.body;
+ const candidate=field.value.slice(0,field.selectionStart)+'{name}'+field.value.slice(field.selectionEnd);
+ if(characterCount(candidate)>limit){status('There is not enough room to insert {name}. Shorten the field or select text to replace.',true);field.focus();return;}
+ field.setRangeText('{name}',field.selectionStart,field.selectionEnd,'end');field.focus();constrainField(field.id);
 });
-bind('editor','submit',event=>{event.preventDefault();applyDraft();status('Changes applied. Save to server or download Lua to keep this version.');});
+bind('editor','submit',event=>{event.preventDefault();const result=applyDraft();status(result?`Changes applied to ${result.accountCount} account${result.accountCount===1?'':'s'}. Save to server or download Lua to keep this version.`:'No unapplied changes.');});
 bind('discard','click',()=>{state.draftDirty=false;if(state.selected===null)state.selected=undefined;render();status('Draft discarded. Applied templates are unchanged.');});
 bind('duplicate','click',()=>{applyDraft();const v=values();addEntry(current(),state.kind,{...v,title:(v.title||'Welcome')+' — copy'});state.selected=list().at(-1).key;state.changed=true;render();status('Template duplicated with a new ID and fresh usage history.');});
 bind('delete','click',()=>{

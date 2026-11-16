@@ -30,7 +30,7 @@ export const starterTemplates = {
     },
     {
       "title": "You've been made",
-      "subject": "Congratulations - You've Been Made {name}",
+      "subject": "You've Been Made, {name}!",
       "body": "Dear {name},\n\nCongratulations. You've been MADE.\n\nYou are officially a member of the Alphabet Mafia Family! Your duties may include dungeons, trials, antiquities, fashion crimes, decorating empty houses, and other queer mischief across Tamriel.\n\nFamily rules are simple: be kind, help when you can, ask when you need it, and join the fun. Mention a pet and photographic evidence may be demanded.\n\nMay your loot be plentiful, your wipes hilarious, and your fashion crimes fabulous!\n\n--The Alphabet Mafia Consiglieri\n\nP.S. Report to headquarters: discord.gg/alphabetmafia\nPlease set your server name to match your ESO Account name. It helps us identify our accomplices."
     },
     {
@@ -41,7 +41,7 @@ export const starterTemplates = {
     {
       "title": "The Initiation",
       "subject": "Your Alphabet Mafia Initiation {name}",
-      "body": "Dear {name},\n\nYour application has been reviewed by several shadowy figures in an undisclosed back room. After intense deliberation, dramatic lighting, and at least one completely unnecessary monologue, a decision has been reached.\n\nYou're in.\n\nWelcome to the Alphabet Mafia!\n\nYou are now part of a proud criminal tradition of being queer, causing trouble across Tamriel, collecting entirely too many furnishings, standing around talking when we were supposed to start the dungeon ten minutes ago, and looking fabulous while doing it.\n\nYour initiation is relatively painless. Say hello. Join some events. Ask for help when you need it. Help another Family member when you can. Be yourself. Have fun.\n\nThere is no blood oath.\n\nWe considered one, but the paperwork was ridiculous.\n\nThere is, however, a pet tax. If you have pets, we expect pictures. Failure to comply may result in someone asking you again.\n\nWelcome to the Family, {name}. Your alibi starts now.\n\n--The Alphabet Mafia Consiglieri\n\nP.S. Join the rest of the Family at discord.gg/alphabetmafia and please change your server name to match your ESO Account name. We run a respectable criminal organization and need to know who everyone is."
+      "body": "Dear {name},\n\nAfter shadowy deliberations, dramatic lighting, and an unnecessary monologue, the Family has decided: you're in. Welcome to the Alphabet Mafia!\n\nYour initiation: be queer, cause trouble across Tamriel, collect too many furnishings, and look fabulous. Say hello, join events, ask for help, and help others when you can.\n\nNo blood oath; the paperwork was ridiculous. There is a pet tax: pictures required!\n\nWelcome to the Family. Your alibi starts now.\n\n--The Alphabet Mafia Consiglieri\n\nP.S. Join us: discord.gg/alphabetmafia\nPlease set your server name to your ESO Account name."
     },
     {
       "title": "The Family Handbook",
@@ -52,3 +52,20 @@ export const starterTemplates = {
 };
 // Catalog identities stay stable across accounts and edits; addon numeric IDs remain local.
 for(const kind of ['message','email'])starterTemplates[kind].forEach((template,index)=>{template.webTemplateId=`gsa-starter:${kind}:${index+1}`;});
+
+// Original addon wording remains an identity alias; it is never inserted into accounts.
+export const legacyStarterTemplates = {
+  "message": [],
+  "email": [
+    {
+      "subject": "Congratulations - You've Been Made {name}",
+      "body": "Dear {name},\n\nCongratulations. You've been MADE.\n\nYou are officially a member of the Alphabet Mafia Family! Your duties may include dungeons, trials, antiquities, fashion crimes, decorating empty houses, and other queer mischief across Tamriel.\n\nFamily rules are simple: be kind, help when you can, ask when you need it, and join the fun. Mention a pet and photographic evidence may be demanded.\n\nMay your loot be plentiful, your wipes hilarious, and your fashion crimes fabulous!\n\n--The Alphabet Mafia Consiglieri\n\nP.S. Report to headquarters: discord.gg/alphabetmafia\nPlease set your server name to match your ESO Account name. It helps us identify our accomplices.",
+      "webTemplateId": "gsa-starter:email:2"
+    },
+    {
+      "subject": "Your Alphabet Mafia Initiation {name}",
+      "body": "Dear {name},\n\nYour application has been reviewed by several shadowy figures in an undisclosed back room. After intense deliberation, dramatic lighting, and at least one completely unnecessary monologue, a decision has been reached.\n\nYou're in.\n\nWelcome to the Alphabet Mafia!\n\nYou are now part of a proud criminal tradition of being queer, causing trouble across Tamriel, collecting entirely too many furnishings, standing around talking when we were supposed to start the dungeon ten minutes ago, and looking fabulous while doing it.\n\nYour initiation is relatively painless. Say hello. Join some events. Ask for help when you need it. Help another Family member when you can. Be yourself. Have fun.\n\nThere is no blood oath.\n\nWe considered one, but the paperwork was ridiculous.\n\nThere is, however, a pet tax. If you have pets, we expect pictures. Failure to comply may result in someone asking you again.\n\nWelcome to the Family, {name}. Your alibi starts now.\n\n--The Alphabet Mafia Consiglieri\n\nP.S. Join the rest of the Family at discord.gg/alphabetmafia and please change your server name to match your ESO Account name. We run a respectable criminal organization and need to know who everyone is.",
+      "webTemplateId": "gsa-starter:email:4"
+    }
+  ]
+};

@@ -34,11 +34,11 @@
         <section class="panel editor-panel"><div id="editor-empty" class="empty-editor"><span aria-hidden="true">✦</span><h2>A welcome worth writing.</h2><p>Choose a template or create your first greeting.</p></div>
           <form id="editor" hidden><div class="panel-heading"><div><p id="editor-kind" class="eyebrow">WELCOME CHAT</p><h2 id="editor-heading">Edit your welcome</h2></div><span id="draft-state" class="quiet">Applied</span></div>
             <div class="editor-fields"><label>Template name<input id="title" autocomplete="off" placeholder="A name you’ll recognize"></label><label class="check"><input id="enabled" type="checkbox" checked><span>Enabled in the welcome pool</span></label>
-              <label id="subject-label" hidden>Email subject<input id="subject" placeholder="Welcome to the Family, {name}"></label>
+              <label id="subject-label" hidden>Email subject<input id="subject" placeholder="Welcome to the Family, {name}" aria-describedby="subject-length"><output id="subject-length"></output></label>
               <div class="field-heading"><label id="content-label" for="content">Message text</label><button id="insert-name" type="button" class="token">+ {name}</button></div>
               <textarea id="content" rows="8" placeholder="Make your newest member feel at home…"></textarea>
               <div class="field-meta"><span>Use <code>{name}</code> for the applicant’s ESO account name.</span><output id="length"></output></div>
-              <div class="editor-footer"><button id="apply" type="submit" class="gold">Apply changes</button><button id="discard" type="button">Discard draft</button><span class="spacer"></span><button id="duplicate" type="button">Duplicate</button><button id="delete" type="button" class="danger">Delete</button></div>
+              <fieldset id="apply-targets"><legend>Apply changes to accounts</legend><p class="hint">Choose additional accounts for this message or email. Existing copies of this template are updated; other accounts receive a new copy.</p><div id="apply-account-list"></div></fieldset><div class="editor-footer"><button id="apply" type="submit" class="gold">Apply changes</button><button id="discard" type="button">Discard draft</button><span class="spacer"></span><button id="duplicate" type="button">Duplicate</button><button id="delete" type="button" class="danger">Delete</button></div>
             </div>
           </form>
         </section>
