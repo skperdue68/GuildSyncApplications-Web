@@ -24,6 +24,23 @@ The bundled update retains separate application captures when an account leaves 
 
 The ZIP contains Lua code that runs inside your game, so verify what you downloaded. Its SHA-256 checksum is committed in [`public/downloads/SHA256SUMS`](public/downloads/SHA256SUMS). Check a downloaded copy with `sha256sum GuildSyncApplications.zip` (macOS: `shasum -a 256`; Windows PowerShell: `Get-FileHash GuildSyncApplications.zip`) and compare it with that file in this repository. `npm test` fails if the bundled ZIP and `SHA256SUMS` ever disagree, and rebuilding with `scripts/package-addon.py` rewrites both together.
 
+## Shared starters: publish, edit and remove
+
+Choose **Starters** at the top of the page, or **Browse starters** in an open workspace. Everyone can browse published chat messages and emails. With a file open, **Use this starter** copies one into the selected account. Starters already added to that account are hidden by their permanent IDs. Copies in personal files stay independent: editing or removing a shared starter never changes those copies.
+
+To maintain the public list, choose **Manage starters** and enter the starter-management password. You can **Add starter**, **Edit starter**, or **Remove starter**. The editor previews `{name}`, enforces the 335/37/680 character limits and retains a starter's permanent ID when its wording changes. Removal requires confirmation. **Lock management** forgets the password; refreshing the page also locks management. The password stays only in page memory and is never saved in browser storage. File-overwrite passwords do not grant starter-management access.
+
+The server owner enables management by adding these settings to the project's `.env` and restarting `gsa-web`:
+
+```dotenv
+STARTERS_DIR=data/starters
+STARTER_MANAGEMENT_PASSWORD="replace-with-a-long-unique-password"
+```
+
+Replace the example password with your own. Leaving `STARTER_MANAGEMENT_PASSWORD` unset keeps browsing available and disables management. Use HTTPS when entering the password remotely. Repeated incorrect passwords are temporarily rate-limited; no password is returned in catalogue data or written into the catalogue file.
+
+The catalogue starts with the ten built-in starters and is written to `STARTERS_DIR/catalogue.json` after its first change. Keep this directory across deployments and back it up; the service user needs write access. Deleted starters, including an entirely emptied list, stay deleted after a restart. Existing catalogue files take precedence over release defaults. Concurrent edits use revisions: if someone changed the list first, your draft stays open and you must reload/review the catalogue before saving. A damaged catalogue is reported rather than silently reset.
+
 ## Template identity and duplicate prevention
 
 Templates created by the web editor receive a permanent `webTemplateId`, saved in Lua and retained when imported into another account or customized. The add-on's numeric `id` remains local to each account, avoiding collisions with existing templates. An intentional **Duplicate** creates a new permanent identity.

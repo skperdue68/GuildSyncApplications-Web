@@ -1,6 +1,7 @@
 import {parseSavedVariables} from '/lua-data.js';
 import {profiles,entries,validateEntry,updateEntry,addEntry,removeEntry,newDocument,exportDocument,exportServerDocument,captureApplicationData,setCaptureApplicationData,characterCount,normalizeNewlines,TEXT_LIMITS,constrainTextEdit,applyTemplateToAccounts,preview,importTemplates,hasTemplate,addTemplate,sourceTemplateId} from '/model.js';
 import {starterTemplates} from '/defaults.js';
+import {openStarterCatalogue} from '/starters.js';
 
 const $=id=>document.getElementById(id);
 const state={doc:null,profiles:[],profile:0,kind:'message',selected:undefined,draftDirty:false,changed:false};
@@ -181,17 +182,18 @@ bind('delete','click',()=>{
  if(!confirm('Delete this welcome template? This removes it from the current workspace.'))return;
  removeEntry(current(),state.kind,state.selected);state.selected=undefined;state.draftDirty=false;state.changed=true;render();status('Template deleted. Save or download to keep the change.');
 });
-bind('starters','click',()=>{
- applyDraft();showDialog('A little inspiration',`<p>Optional Alphabet Mafia starters from the add-on. Add a copy to your current account and make it your own. Existing templates stay as they are.</p><div id="starter-list"></div>${dialogError}`);
- const available=starterTemplates[state.kind].filter(template=>!hasTemplate(current(),state.kind,template));
- const hidden=starterTemplates[state.kind].length-available.length;
- $('starter-list').append(el('p',`${hidden} already-added templates hidden for ${current().account}.`,'hint'));
- if(!available.length)$('starter-list').append(el('p','All starter templates in this category have already been added to this account.'));
- for(const template of available){
-  const card=el('article',undefined,'starter');card.append(el('h3',template.title),el('p',template.message||template.subject+'\n\n'+template.body));
-  const button=el('button','Use this starter');button.addEventListener('click',run(()=>{addTemplate(current(),state.kind,{...template,enabled:true});state.selected=list().at(-1).key;state.changed=true;render();$('dialog').close();status('Starter added. Edit the wording to make it your own.');}));card.append(button);$('starter-list').append(card);
- }
-});
+function browseStarters(){
+ if(state.doc)applyDraft();const destinationDoc=state.doc,destination=state.doc?current():null;
+ return openStarterCatalogue({dialog:$('dialog'),body:$('dialog-body'),title:$('dialog-title'),initialKind:state.kind,
+  canUse:()=>!!destinationDoc&&state.doc===destinationDoc&&current()===destination,
+  isAdded:(kind,template)=>hasTemplate(destination,kind,template),onStatus:status,
+  use:(kind,template)=>{
+   if(state.doc!==destinationDoc||current()!==destination)throw Error('The destination account changed. Open starters again.');
+   addTemplate(destination,kind,{...template,enabled:true});state.kind=kind;state.selected=list().at(-1).key;state.changed=true;render();$('dialog').close();status('Starter added. Edit the wording to make it your own.');
+  }
+ });
+}
+bind('starters','click',browseStarters);bind('shared-starters','click',browseStarters);
 bind('download','click',()=>{
  applyDraft();const lua=exportDocument(state.doc),url=URL.createObjectURL(new Blob([lua],{type:'text/plain;charset=utf-8'}));
  const a=el('a');a.href=url;a.download='GuildSyncApplications.lua';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);

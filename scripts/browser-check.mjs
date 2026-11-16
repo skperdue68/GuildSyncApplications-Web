@@ -27,10 +27,12 @@ try {
  await page.getByRole('button',{name:'Start a new file',exact:true}).click();
  await page.locator('#new-account').fill('@StarterTester');await page.getByRole('button',{name:'Create file',exact:true}).click();
  await page.getByRole('button',{name:'Browse starters',exact:true}).click();
+ await page.locator('#starter-list .starter').first().waitFor();
  assert.equal(await page.getByRole('button',{name:'Use this starter',exact:true}).count(),5);
  await page.getByRole('button',{name:'Use this starter',exact:true}).first().click();
  await page.getByLabel('Message text').fill('My personalized welcome');await page.getByRole('button',{name:'Apply changes',exact:true}).click();
  await page.getByRole('button',{name:'Browse starters',exact:true}).click();
+ await page.locator('#starter-list .starter').first().waitFor();
  assert.equal(await page.getByRole('button',{name:'Use this starter',exact:true}).count(),4);
  assert.match(await page.locator('#starter-list').innerText(),/1 already-added/);
  await page.getByRole('button',{name:'Close dialog',exact:true}).click();
