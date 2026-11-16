@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "GuildSyncApplications welcome message and email studio",
-  "scripts": { "start": "node src/server.js", "test": "node --test", "test:browser": "node scripts/browser-check.mjs && node scripts/editor-controls-check.mjs" },
+  "scripts": { "start": "node src/server.js", "test": "node --test", "test:browser": "node scripts/browser-check.mjs && node scripts/editor-controls-check.mjs && node scripts/starter-manager-check.mjs" },
   "engines": { "node": ">=22" },
   "devDependencies": { "playwright": "^1.65.0" }
 }

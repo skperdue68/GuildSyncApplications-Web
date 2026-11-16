@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve, dirname } from "node:path";
 import { createLibraryStore, LibraryError, DEFAULT_MAX_FILES, DEFAULT_MAX_BYTES } from './library-store.js';
+import {createStarterStore,StarterError} from './starter-store.js';
 const MAX_REQUEST_BYTES = 40 * 1024 * 1024 + 16384;
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../public");
 const paths = {
@@ -11,6 +12,7 @@ const paths = {
   "/": ["index.html", "text/html"],
   "/style.css": ["style.css", "text/css"],
   "/app.js": ["app.js", "text/javascript"],
+  "/starters.js": ["starters.js", "text/javascript"],
   "/logo.svg": ["logo.svg", "image/svg+xml"],
   "/defaults.js": ["../src/defaults.js", "text/javascript"],
   "/model.js": ["../src/model.js", "text/javascript"],
@@ -21,16 +23,20 @@ export function readConfig(env=process.env){
  if(!Number.isInteger(port)||port<1||port>65535)throw Error('PORT must be 1-65535.');
  if(env.PUBLIC_ORIGIN){const value=new URL(env.PUBLIC_ORIGIN);if(!['http:','https:'].includes(value.protocol)||value.username||value.password||value.pathname!=='/'||value.search||value.hash)throw Error('PUBLIC_ORIGIN must be an HTTP(S) origin without a path or credentials.');publicOrigin=value.origin;}
  const positive=(value,fallback,name)=>{if(value===undefined||value==='')return fallback;const number=Number(value);if(!Number.isInteger(number)||number<1)throw Error(`${name} must be a positive whole number.`);return number;};
- return {host,port,publicOrigin,libraryDir:resolve(env.LIBRARY_DIR || 'data/shared-library'),libraryMaxFiles:positive(env.LIBRARY_MAX_FILES,DEFAULT_MAX_FILES,'LIBRARY_MAX_FILES'),libraryMaxBytes:positive(env.LIBRARY_MAX_BYTES,DEFAULT_MAX_BYTES,'LIBRARY_MAX_BYTES')};
+ const starterManagementPassword=env.STARTER_MANAGEMENT_PASSWORD||'';
+ if(typeof starterManagementPassword!=='string'||Buffer.byteLength(starterManagementPassword,'utf8')>1024)throw Error('STARTER_MANAGEMENT_PASSWORD must be text of at most 1024 UTF-8 bytes.');
+ return {host,port,publicOrigin,libraryDir:resolve(env.LIBRARY_DIR || 'data/shared-library'),libraryMaxFiles:positive(env.LIBRARY_MAX_FILES,DEFAULT_MAX_FILES,'LIBRARY_MAX_FILES'),libraryMaxBytes:positive(env.LIBRARY_MAX_BYTES,DEFAULT_MAX_BYTES,'LIBRARY_MAX_BYTES'),startersDir:resolve(env.STARTERS_DIR||'data/starters'),starterManagementPassword};
 }
 export function createServer(options={}) {
-  const config=readConfig({HOST:options.host,PORT:options.port,PUBLIC_ORIGIN:options.publicOrigin,LIBRARY_DIR:options.libraryDir,LIBRARY_MAX_FILES:options.libraryMaxFiles,LIBRARY_MAX_BYTES:options.libraryMaxBytes});
+  const config=readConfig({HOST:options.host,PORT:options.port,PUBLIC_ORIGIN:options.publicOrigin,LIBRARY_DIR:options.libraryDir,LIBRARY_MAX_FILES:options.libraryMaxFiles,LIBRARY_MAX_BYTES:options.libraryMaxBytes,STARTERS_DIR:options.startersDir,STARTER_MANAGEMENT_PASSWORD:options.starterManagementPassword});
   const library = createLibraryStore(config.libraryDir,{maxFiles:config.libraryMaxFiles,maxBytes:config.libraryMaxBytes});
+  const starters=createStarterStore(config.startersDir,{managementPassword:config.starterManagementPassword});
   const publicHost=config.publicOrigin?new URL(config.publicOrigin).host.toLowerCase():null;
   return http.createServer(async (req, res) => {
     const host = (req.headers.host || "").toLowerCase();
     const path = new URL(req.url, 'http://localhost').pathname;
-    const api = path === '/api/library' || path.startsWith('/api/library/');
+    const starterApi=path==='/api/starters'||path.startsWith('/api/starters/');
+    const api = starterApi || path === '/api/library' || path.startsWith('/api/library/');
     const json = (status, value, headers = {}) => {
       res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers });
       res.end(req.method === 'HEAD' ? undefined : JSON.stringify(value));
@@ -44,6 +50,25 @@ export function createServer(options={}) {
       if (api) return json(403, {error:'Origin not allowed.'});
       res.writeHead(403);
       return res.end("Origin not allowed.");
+    }
+    if(starterApi){
+      try{
+        if(path==='/api/starters'&&(req.method==='GET'||req.method==='HEAD'))return json(200,await starters.list());
+        const write=(path==='/api/starters'||path==='/api/starters/session')&&req.method==='POST';
+        const remove=path.startsWith('/api/starters/')&&path!=='/api/starters/session'&&req.method==='DELETE';
+        if(!write&&!remove)return json(405,{error:'Method not allowed.'},{Allow:path==='/api/starters'?'GET, HEAD, POST':path==='/api/starters/session'?'POST':'DELETE'});
+        if(!req.headers.origin)return json(403,{error:'A matching Origin is required.'});
+        if(!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type']||''))return json(415,{error:'Use application/json.'});
+        if(Number(req.headers['content-length'])>16384)return json(413,{error:'Request is too large.'});
+        let length=0;const chunks=[];
+        for await(const chunk of req){length+=chunk.length;if(length>16384)return json(413,{error:'Request is too large.'});chunks.push(chunk);}
+        let body;try{body=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{return json(400,{error:'Provide valid JSON.'});}
+        if(!body||typeof body!=='object'||Array.isArray(body))return json(400,{error:'Provide a starter request.'});
+        const client=req.socket.remoteAddress||'unknown';
+        if(path==='/api/starters/session'){await starters.authorize(body.password,client);return json(200,{ok:true});}
+        if(remove){let id;try{id=decodeURIComponent(path.slice('/api/starters/'.length));}catch{return json(400,{error:'Invalid starter identity.'});}return json(200,await starters.remove(id,body.password,body.revision,client));}
+        return json(200,await starters.save(body.template,body.password,body.revision,client));
+      }catch(error){return json(error instanceof StarterError?error.status:500,{error:error instanceof StarterError?error.message:'Unable to access the starter catalogue.'});}
     }
     if (api) {
       try {
