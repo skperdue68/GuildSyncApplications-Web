@@ -10,12 +10,12 @@ const failure = (kind, message) => Object.assign(Error(message), { kind });
 // Checks SavedVariables text off the main thread and resolves with the Lua text to
 // store. Rejects with an Error whose `kind` is one of: invalid (bad data), busy,
 // timeout, memory, internal.
-export function validateLua(lua, { timeoutMs = VALIDATION_TIMEOUT_MS, maxConcurrent = MAX_CONCURRENT_VALIDATIONS } = {}) {
+export function validateLua(lua, { timeoutMs = VALIDATION_TIMEOUT_MS, maxConcurrent = MAX_CONCURRENT_VALIDATIONS, allowOversized = false } = {}) {
   if (active >= maxConcurrent) return Promise.reject(failure('busy', 'The server is busy checking other uploads. Try again in a moment.'));
   active++;
   return new Promise((resolve, reject) => {
     let settled = false;
-    const worker = new Worker(workerUrl, { workerData: lua, resourceLimits: { maxOldGenerationSizeMb: 512 } });
+    const worker = new Worker(workerUrl, { workerData: {lua,allowOversized}, resourceLimits: { maxOldGenerationSizeMb: 512 } });
     const timer = setTimeout(() => finish(reject, failure('timeout', 'Checking the file took too long.')), timeoutMs);
     function finish(settle, value) {
       if (settled) return;

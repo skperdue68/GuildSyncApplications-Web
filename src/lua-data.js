@@ -28,6 +28,8 @@ function encodeLuaString(value) {
     else if (point >= 55296 && point <= 57343) throw Error("Unsupported isolated Unicode surrogate");
     else if (character === "\\") result += "\\\\";
     else if (character === '"') result += '\\"';
+    else if (character === "\n") result += "\\n";
+    else if (character === "\r") result += "\\r";
     else if (point < 32 || point === 127) result += "\\" + String(point).padStart(3, "0");
     else result += character;
   }

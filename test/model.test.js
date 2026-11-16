@@ -28,9 +28,9 @@ test('new chat and email entries use unique numeric IDs and Lua numeric list key
   const reloaded=model.profiles(parseSavedVariables(model.exportDocument(doc)))[0];
   assert.equal(model.entries(reloaded,'message')[0].entry.id,9);
 });
-test('UTF-8 byte validation prevents addon truncation and incomplete email saves',()=>{
+test('Character validation prevents addon truncation and incomplete email saves',()=>{
   assert.doesNotThrow(()=>model.validateEntry('message',{message:'é'.repeat(167)+'!'}));
-  assert.throws(()=>model.validateEntry('message',{message:'é'.repeat(168)}),/335/);
+  assert.throws(()=>model.validateEntry('message',{message:'é'.repeat(336)}),/335/);
   assert.throws(()=>model.validateEntry('message',{message:'  '}),/required/i);
   assert.throws(()=>model.validateEntry('email',{subject:'Hello',body:''}),/required/i);
   assert.equal(model.preview('Hi {name}, {name}!', '@Apollo'),'Hi @Apollo, @Apollo!');

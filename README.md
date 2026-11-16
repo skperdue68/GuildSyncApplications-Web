@@ -14,11 +14,11 @@ Open http://127.0.0.1:4174. Try the sample workspace to explore, open your lates
 
 ## Download the standalone ESO add-on
 
-Choose **Download add-on ZIP** at the top of the page to download `GuildSyncApplications.zip`. It contains the **GuildSyncApplications 1.4.5** add-on Lua file, manifest and installation instructions. Extract its `GuildSyncApplications` folder into `Documents/Elder Scrolls Online/live/AddOns/` and install **LibAddonMenu-2.0** separately (for example through Minion). No GuildSync backend, desktop client or Discord bot is required.
+Choose **Download add-on ZIP** at the top of the page to download `GuildSyncApplications.zip`. It contains the **GuildSyncApplications 1.5.3** add-on Lua file, manifest and installation instructions. This version counts welcome chat as UTF-8 characters so accented text and emoji are not cut at a byte boundary. Extract its `GuildSyncApplications` folder into `Documents/Elder Scrolls Online/live/AddOns/` and install **LibAddonMenu-2.0** separately (for example through Minion). No GuildSync backend, desktop client or Discord bot is required.
 
 The ZIP is add-on software, without personal account settings. **Download Lua** in the editor instead exports your edited SavedVariables; that file belongs in `live/SavedVariables/`, with ESO closed. Do not put edited SavedVariables into the AddOns folder.
 
-The bundled files originate from [GuildSyncApplications 1.4.5](https://github.com/skperdue68/GuildSync/tree/d921510/ESO/GuildSyncApplications), commit `d921510`. Developers can rebuild the ZIP from an add-on source folder with `python scripts/package-addon.py /path/to/GuildSyncApplications`. Python is not needed to run the site or download the bundled ZIP.
+The bundled files originate from [GuildSyncApplications 1.5.3](https://github.com/skperdue68/GuildSync/tree/30560770719b3eb8da8df23d61abe396ab61b643/ESO/GuildSyncApplications), commit `30560770719b3eb8da8df23d61abe396ab61b643`. Developers can rebuild the ZIP from an add-on source folder with `python scripts/package-addon.py /path/to/GuildSyncApplications`. Python is not needed to run the site or download the bundled ZIP.
 
 The bundled update retains separate application captures when an account leaves and rejoins, including captures awaiting upload. Failed acceptances preserve older records. Install the updated add-on folder and use `/reloadui`; preserve your existing SavedVariables. Turning application capture off still preserves records and welcome behavior.
 
@@ -34,13 +34,15 @@ Starter and server import lists hide templates already in the selected destinati
 
 1. Open `Documents/Elder Scrolls Online/live/SavedVariables/GuildSyncApplications.lua`. Choose the SavedVariables file; the add-on source has the same filename and is not editable here.
 2. Select your ESO account. Welcome chat and welcome emails have separate libraries. Create, edit, duplicate, delete, or enable templates. Optional starter templates come from GuildSyncApplications 1.4.3.
-3. Use `{name}` wherever the applicant's ESO account name belongs. The live preview substitutes a sample name. Chat messages must fit **335 UTF-8 bytes**, matching the add-on. Leave room for name expansion; the preview warns when the expanded text is too long. Email subject and body are both required.
-4. Choose **Apply changes**. Navigation also applies valid drafts. Invalid drafts stay in the editor until corrected or explicitly discarded. Applying only changes the browser workspace.
+3. Use `{name}` wherever the applicant's ESO account name belongs. The live preview substitutes a sample name. Limits are **335 characters for welcome chat**, **37 for an email subject**, and **680 for an email body**. Each line break counts as one character; CRLF and CR normalize to LF. Downloads use Lua `\n` for a newline and `\n\n` for a blank line. Typing, paste and token insertion stop at each field's limit. Leave room for name expansion; the preview warns if the expanded result exceeds a limit. Email subject and body are both required.
+4. Choose **Apply changes**. With multiple accounts in the file, select additional accounts under **Apply changes to accounts** to create or update the same template in each. Copies share the permanent template ID; existing local IDs, usage history, application records and capture settings remain account-specific. Account choices reset when switching templates or accounts. A new draft or edited list item is highlighted amber with an **Unapplied** badge until applied or discarded. Navigation also applies valid drafts. Invalid drafts stay in the editor until corrected or explicitly discarded. Applying only changes the browser workspace.
 5. Choose **Download Lua** to obtain `GuildSyncApplications.lua`. Close ESO, back up the original, and replace the file in SavedVariables. Remove any browser-added suffix such as `(1)` from the filename. Restart ESO.
 
 **Always open the newest SavedVariables after playing ESO.** This version does not merge newer snapshots into an older workspace. Installing an old file can replace newer records and usage history. New files contain no previous application records, so use an existing file when preserving records matters.
 
 Imported unknown fields, other accounts, application records, IDs and usage history are preserved. Edited existing templates keep their history; new and duplicated entries receive fresh IDs and history. Lua is parsed as restricted data and is never executed. Nonstandard, sparse or malformed template lists are rejected instead of silently dropping entries. Comments and whitespace are reformatted on export.
+
+Previously saved oversized templates remain loadable and visible in full; they are never silently shortened. Shorten them before applying, saving or downloading. The two built-in web starter fields that exceeded the new limits were edited to fit, retaining their original catalog identities.
 
 ## Shared server library
 
